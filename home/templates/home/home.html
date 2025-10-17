@@ -1,0 +1,164 @@
+{% extends 'base.html' %}
+
+{% block main %}
+
+<div class="row g-4">
+  <!-- Bài đăng nổi bật - Bên trái -->
+  <div class="col-lg-8">
+    <!-- Featured Posts Section -->
+    <div class="card shadow-sm mb-4">
+      <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+          <i class="bi bi-star-fill me-2"></i>Bài đăng nổi bật
+        </h5>
+        <a href="#" class="text-white small">Xem tất cả</a>
+      </div>
+      <div class="card-body">
+        {% for post in trending_posts %}
+        <div class="d-flex align-items-start mb-3 pb-3 border-bottom forum-item p-2 rounded">
+          <div class="flex-grow-1">
+            <h6 class="mb-1">
+              <a href="#" class="text-decoration-none fw-bold">{{ post.title }}</a>
+            </h6>
+            <p class="text-muted small mb-1">{{ post.content|truncatewords:20 }}</p>
+            <div class="d-flex gap-3 small text-muted">
+              <span><i class="bi bi-person me-1"></i>{{ post.author.username }}</span>
+              <span><i class="bi bi-calendar me-1"></i>{{ post.created_at|date:"d/m/Y" }}</span>
+              {% if post.forum %}
+              <span><i class="bi bi-chat me-1"></i>{{ post.forum.title }}</span>
+              {% endif %}
+            </div>
+          </div>
+          <div class="text-end">
+            <span class="badge bg-primary">Nổi bật</span>
+          </div>
+        </div>
+        {% empty %}
+        <div class="text-center py-4">
+          <i class="bi bi-inbox display-4 text-muted"></i>
+          <p class="text-muted mt-2">Chưa có bài đăng nổi bật</p>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Latest Posts Section -->
+    <div class="card shadow-sm">
+      <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+          <i class="bi bi-clock me-2"></i>Bài đăng mới nhất
+        </h5>
+        <a href="#" class="text-white small">Xem tất cả</a>
+      </div>
+      <div class="card-body">
+        {% for post in latest_posts %}
+        <div class="d-flex align-items-start mb-3 pb-3 {% if not forloop.last %}border-bottom{% endif %} forum-item p-2 rounded">
+          <img src="https://via.placeholder.com/40" class="rounded-circle me-3" alt="Avatar">
+          <div class="flex-grow-1">
+            <h6 class="mb-1">
+              <a href="#" class="text-decoration-none">{{ post.title }}</a>
+            </h6>
+            <div class="d-flex gap-3 small text-muted">
+              <span><i class="bi bi-person me-1"></i>{{ post.author.username }}</span>
+              <span><i class="bi bi-clock me-1"></i>{{ post.created_at|timesince }} trước</span>
+            </div>
+          </div>
+          <div class="text-end small text-muted">
+            <div class="fw-bold">{{ post.reply_count }}</div>
+            <div>trả lời</div>
+          </div>
+        </div>
+        {% empty %}
+        <div class="text-center py-4">
+          <i class="bi bi-chat-square display-4 text-muted"></i>
+          <p class="text-muted mt-2">Chưa có bài đăng nào</p>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Statistics - Bên phải -->
+  <div class="col-lg-4">
+    <div class="d-flex flex-column gap-4">
+      <!-- Forum Statistics -->
+      <div class="card shadow-sm stats-card">
+        <div class="card-header bg-dark text-white">
+          <h6 class="mb-0"><i class="bi bi-graph-up me-2"></i>Thống kê diễn đàn</h6>
+        </div>
+        <div class="card-body">
+          <div class="row text-center">
+            <div class="col-6 mb-3">
+              <div class="border-end">
+                <div class="h4 text-primary mb-1">{{ post_count|default:"0" }}</div>
+                <div class="small text-muted">Bài đăng</div>
+              </div>
+            </div>
+            <div class="col-6 mb-3">
+              <div class="h4 text-success mb-1">{{ user_count|default:"0" }}</div>
+              <div class="small text-muted">Thành viên</div>
+            </div>
+            <div class="col-6">
+              <div class="border-end">
+                <div class="h4 text-warning mb-1">{{ topic_count|default:"0" }}</div>
+                <div class="small text-muted">Chủ đề</div>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="h4 text-info mb-1">{{ reply_count|default:"0" }}</div>
+              <div class="small text-muted">Trả lời</div>
+            </div>
+          </div>
+          <hr>
+          <div class="text-center">
+            <small class="text-muted">Thành viên mới: <strong>{{ latest_user.username|default:"N/A" }}</strong></small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Online Users -->
+      <div class="card shadow-sm stats-card">
+        <div class="card-header bg-info text-white">
+          <h6 class="mb-0"><i class="bi bi-circle-fill me-2"></i>Đang trực tuyến</h6>
+        </div>
+        <div class="card-body">
+          <div class="d-flex flex-wrap gap-2">
+            <span class="badge bg-light text-dark">{{ online_users.members }} thành viên</span>
+            <span class="badge bg-light text-dark">{{ online_users.guests }} khách</span>
+          </div>
+          <div class="mt-2 small text-muted">
+            <i class="bi bi-record-fill text-success me-1"></i>
+            {% for user in online_users.sample_users %}
+            <strong>{{ user }}</strong>{% if not forloop.last %}, {% endif %}
+            {% endfor %}
+            {% if online_users.others_count > 0 %}và {{ online_users.others_count }} người khác{% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Links -->
+      <div class="card shadow-sm">
+        <div class="card-header bg-secondary text-white">
+          <h6 class="mb-0"><i class="bi bi-lightning me-2"></i>Liên kết nhanh</h6>
+        </div>
+        <div class="card-body">
+          <div class="d-grid gap-2">
+            {% if user.is_authenticated %}
+            <a href="#" class="btn btn-outline-primary btn-sm">
+              <i class="bi bi-pencil-square me-1"></i>Viết bài mới
+            </a>
+            {% endif %}
+            <a href="#" class="btn btn-outline-success btn-sm">
+              <i class="bi bi-search me-1"></i>Tìm kiếm bài đăng
+            </a>
+            <a href="#" class="btn btn-outline-info btn-sm">
+              <i class="bi bi-question-circle me-1"></i>Trợ giúp
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

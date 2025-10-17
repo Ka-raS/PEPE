@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng nhập - PEPE</title>
+    <style>
+        /* Copy CSS từ register.html và điều chỉnh */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .login-container {
+            background: white;
+            padding: 50px;
+            border-radius: 15px;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 450px;
+        }
+        
+        .logo {
+            font-size: 32px;
+            font-weight: bold;
+            color: #3498db;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .form-title {
+            font-size: 28px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 14px;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+        
+        .btn-login {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+        
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+        }
+        
+        .register-link {
+            text-align: center;
+            margin-top: 25px;
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+        
+        .register-link a {
+            color: #3498db;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        .message {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 500;
+        }
+        
+        .message.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .message.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">PEPE</div>
+        <h2 class="form-title">Đăng nhập</h2>
+        
+        <div id="message" class="message" style="display: none;"></div>
+        
+        <form id="loginForm">
+            {% csrf_token %} 
+            <div class="form-group">
+                <label for="username">Tên đăng nhập</label>
+                <input 
+                    type="text" 
+                    id="username" 
+                    name="username" 
+                    required 
+                    placeholder="Nhập tên đăng nhập"
+                >
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Mật khẩu</label>
+                <input 
+                    type="password" 
+                    id="password" 
+                    name="password" 
+                    required
+                    placeholder="Nhập mật khẩu"
+                >
+            </div>
+            
+            <button type="submit" class="btn-login" id="submitBtn">
+                Đăng nhập
+            </button>
+        </form>
+        
+        <div class="register-link">
+            Chưa có tài khoản? <a href="register.html">Đăng ký ngay</a>
+        </div>
+    </div>
+
+    <script>
+    // =========================================================================
+    // HÀM TRỢ GIÚP ĐỂ LẤY CSRF TOKEN - BẮT BUỘC CÓ
+    // =========================================================================
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    const csrftoken = getCookie('csrftoken');
+
+    // Lấy các thành phần từ trang web
+    const loginForm = document.getElementById('loginForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const messageDiv = document.getElementById('message');
+
+    function showMessage(message, type) {
+        messageDiv.textContent = message;
+        messageDiv.className = `message ${type}`;
+        messageDiv.style.display = 'block';
+        setTimeout(() => { messageDiv.style.display = 'none'; }, 4000);
+    }
+    
+    // Xử lý sự kiện khi người dùng nhấn nút đăng nhập
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Đang xử lý...';
+
+        const formData = new FormData(loginForm);
+        const data = {
+            username: formData.get('username').trim(),
+            password: formData.get('password')
+        };
+
+        try {
+            // Gửi request đến API đăng nhập của Django
+            const response = await fetch(`/api/login/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken // <-- Gửi token bảo mật
+                },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+
+            // Nếu đăng nhập thành công
+            if (response.ok) {
+                // Lưu token vào localStorage để dùng cho các request sau này
+                localStorage.setItem('authToken', result.token);
+                
+                showMessage('Đăng nhập thành công! Đang chuyển hướng...', 'success');
+                
+                // Chuyển hướng về trang chủ sau 1.5 giây
+                setTimeout(() => {
+                    window.location.href = "/"; // Dấu "/" sẽ trỏ về trang chủ
+                }, 1500);
+            } 
+            // Nếu đăng nhập thất bại
+            else {
+                showMessage(result.error || 'Tên đăng nhập hoặc mật khẩu không đúng.', 'error');
+            }
+        } catch (error) {
+            console.error('Lỗi khi đăng nhập:', error);
+            showMessage('Không thể kết nối đến server.', 'error');
+        } finally { 
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Đăng nhập';
+        }
+    });
+</script>
+</body>
+</html>
