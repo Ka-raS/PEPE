@@ -1,0 +1,279 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ post.title }} - Pepe Forum{% endblock %}
+
+{% block main %}
+<div class="container">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{% url 'forum:index' %}" class="text-decoration-none">
+                    <i class="bi bi-house"></i> Diễn đàn
+                </a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{% url 'forum:subject_detail' post.subject.id %}" class="text-decoration-none">
+                    {{ post.subject.name }}
+                </a>
+            </li>
+            <li class="breadcrumb-item active">Bài viết</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm mb-4 border-0">
+                <div class="card-body p-4">
+                    <!-- Post Header -->
+                    <div class="d-flex justify-content-between align-items-start mb-4">
+                        <h1 class="h2 fw-bold text-primary mb-0">{{ post.title }}</h1>
+                        {% if post.author == request.user %}
+                        <div class="btn-group">
+                            <a href="{% url 'forum:edit_post' post.id %}" class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-pencil"></i> Sửa
+                            </a>
+                            <a href="{% url 'forum:delete_post' post.id %}" class="btn btn-outline-danger btn-sm"
+                               onclick="return confirm('Bạn có chắc chắn muốn xóa bài viết này?')">
+                                <i class="bi bi-trash"></i> Xóa
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Author Info -->
+                    <div class="d-flex align-items-center mb-4 p-3 bg-light rounded-3">
+                        <div class="flex-shrink-0">
+                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" 
+                                 style="width: 50px; height: 50px;">
+                                <i class="bi bi-person-fill fs-5"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="mb-1 fw-bold text-dark">{{ post.author.username }}</h6>
+                            <small class="text-muted">
+                                <i class="bi bi-clock"></i> {{ post.created_at|date:"d/m/Y H:i" }}
+                                {% if post.updated_at != post.created_at %}
+                                • <i class="bi bi-pencil"></i> Cập nhật: {{ post.updated_at|date:"d/m/Y H:i" }}
+                                {% endif %}
+                            </small>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-primary rounded-pill">
+                                <i class="bi bi-eye"></i> {{ post.view_count }} lượt xem
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Post Content -->
+                    <div class="post-content mb-4 lh-lg fs-6 text-dark">
+                        {{ post.content|linebreaks }}
+                    </div>
+
+                    <!-- File Attachment -->
+                    {% if post.attachment %}
+                    <div class="file-attachment mb-4">
+                        <h6 class="fw-bold border-bottom pb-2 mb-3">
+                            <i class="bi bi-paperclip"></i> File đính kèm
+                        </h6>
+                        <div class="card border-start border-primary border-4">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-shrink-0">
+                                        {% if post.file_extension == 'pdf' %}
+                                        <i class="bi bi-file-earmark-pdf text-danger fs-1"></i>
+                                        {% elif post.file_extension in 'doc docx' %}
+                                        <i class="bi bi-file-earmark-word text-primary fs-1"></i>
+                                        {% elif post.file_extension == 'txt' %}
+                                        <i class="bi bi-file-earmark-text text-secondary fs-1"></i>
+                                        {% elif post.file_extension in 'zip rar' %}
+                                        <i class="bi bi-file-earmark-zip text-warning fs-1"></i>
+                                        {% else %}
+                                        <i class="bi bi-file-earmark fs-1 text-muted"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div class="flex-grow-1 ms-3">
+                                        <h6 class="mb-1 fw-bold">{{ post.filename }}</h6>
+                                        <small class="text-muted">
+                                            {{ post.attachment.size|filesizeformat }}
+                                        </small>
+                                    </div>
+                                    <div class="btn-group">
+                                        <a href="{{ post.attachment.url }}" class="btn btn-outline-primary" target="_blank">
+                                            <i class="bi bi-eye"></i> Xem
+                                        </a>
+                                        <a href="{{ post.attachment.url }}" download class="btn btn-outline-success">
+                                            <i class="bi bi-download"></i> Tải xuống
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Tags -->
+                    <div class="d-flex justify-content-between align-items-center border-top pt-3">
+                        <div>
+                            <span class="badge bg-primary rounded-pill me-2">
+                                <i class="bi bi-book"></i> {{ post.subject.name }}
+                            </span>
+                            {% if post.attachment %}
+                            <span class="badge bg-success rounded-pill">
+                                <i class="bi bi-paperclip"></i> Có file đính kèm
+                            </span>
+                            {% endif %}
+                        </div>
+                        <div class="text-muted small">
+                            <i class="bi bi-calendar"></i> Đăng ngày {{ post.created_at|date:"d/m/Y" }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Related Posts -->
+            {% if related_posts %}
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">
+                        <i class="bi bi-collection"></i> Bài viết liên quan
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% for related_post in related_posts %}
+                    <div class="mb-3 pb-3 border-bottom">
+                        <h6 class="fw-bold mb-1">
+                            <a href="{% url 'forum:post_detail' related_post.id %}" class="text-decoration-none text-dark">
+                                {{ related_post.title }}
+                            </a>
+                        </h6>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                <i class="bi bi-person"></i> {{ related_post.author.username }}
+                            </small>
+                            <small class="text-muted">
+                                <i class="bi bi-clock"></i> {{ related_post.created_at|date:"d/m/Y" }}
+                            </small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Author Info -->
+            <div class="card shadow-sm mb-4 border-0">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-person-badge"></i> Về tác giả
+                    </h5>
+                </div>
+                <div class="card-body text-center">
+                    <div class="bg-info text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                         style="width: 80px; height: 80px;">
+                        <i class="bi bi-person-fill fs-2"></i>
+                    </div>
+                    <h5 class="fw-bold">{{ post.author.username }}</h5>
+                    <div class="row text-center mt-3">
+                        <div class="col-12 mb-2">
+                            <span class="badge bg-primary rounded-pill fs-6 px-3 py-2">
+                                {{ post.author.forum_posts.count }} bài viết
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-lightning"></i> Hành động nhanh
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'forum:create_post' %}?subject_id={{ post.subject.id }}" class="btn btn-outline-primary">
+                            <i class="bi bi-pencil"></i> Viết bài mới
+                        </a>
+                        <a href="{% url 'forum:subject_detail' post.subject.id %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> Về môn học
+                        </a>
+                        <a href="{% url 'forum:index' %}" class="btn btn-outline-info">
+                            <i class="bi bi-house"></i> Trang chủ diễn đàn
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistics -->
+            <div class="card shadow-sm mt-4 border-0">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-graph-up"></i> Thống kê bài viết
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6 mb-3">
+                            <div class="border-end">
+                                <div class="h4 fw-bold text-primary mb-1">{{ post.view_count }}</div>
+                                <small class="text-muted">Lượt xem</small>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <div>
+                                <div class="h4 fw-bold text-success mb-1">5</div>
+                                <small class="text-muted">Bình luận</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="border-end">
+                                <div class="h4 fw-bold text-warning mb-1">12</div>
+                                <small class="text-muted">Lượt thích</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div>
+                                <div class="h4 fw-bold text-info mb-1">3</div>
+                                <small class="text-muted">Lượt chia sẻ</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Minimal CSS for custom adjustments -->
+<style>
+.post-content {
+    font-size: 1.1rem;
+    line-height: 1.8;
+}
+.card {
+    transition: transform 0.2s ease-in-out;
+}
+.card:hover {
+    transform: translateY(-2px);
+}
+.breadcrumb {
+    background-color: #f8f9fa;
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+}
+.btn {
+    border-radius: 0.5rem;
+    transition: all 0.2s ease-in-out;
+}
+.btn:hover {
+    transform: translateY(-1px);
+}
+</style>
+{% endblock %}

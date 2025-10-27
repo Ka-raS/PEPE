@@ -1,0 +1,9 @@
+- Fix lại điểm danh
+- Chuyển wallet sang app riêng
+- Kiểm tra home index.html mới
+- Làm coin
+- Điểm danh ở Ví coin
+- Gợi ý tài liệu ở Home
+- Thông báo ở Home
+- Thêm search
+- thêm darkmode <html lang="vi" data-bs-theme="dark">

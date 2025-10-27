@@ -1,106 +1,161 @@
+import os
+
 from django.db import models
 from django.contrib.auth.models import User
-from django.utils.text import slugify
-from datetime import timedelta
-from django.utils import timezone
 
 class Subject(models.Model):
-    name = models.CharField(max_length=200, unique=True)
-    slug = models.SlugField(max_length=210, unique=True, blank=True)
-    description = models.TextField(blank=True)
-
-    class Meta:
-        verbose_name = "Subject"
-        verbose_name_plural = "Subjects"
-        ordering = ["name"]
+    name = models.CharField(max_length=200)
+    description = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.name
 
-    def save(self, *args, **kwargs):
-        # Auto-generate unique slug from name if not provided
-        if not self.slug:
-            base_slug = slugify(self.name)
-            slug_candidate = base_slug
-            counter = 1
-            while Subject.objects.filter(slug=slug_candidate).exclude(pk=self.pk).exists():
-                slug_candidate = f"{base_slug}-{counter}"
-                counter += 1
-            self.slug = slug_candidate
-        super().save(*args, **kwargs)
-
-
-class Forum(models.Model):
-    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name="forums")
-    title = models.CharField(max_length=255)
-    description = models.TextField(blank=True)
-
-    class Meta:
-        verbose_name = "Forum"
-        verbose_name_plural = "Forums"
-        ordering = ["title"]
-
-    def __str__(self):
-        return f"{self.title} ({self.subject.name})"
-
-
-class Thread(models.Model):
-    forum = models.ForeignKey(Forum, on_delete=models.CASCADE, related_name="threads")
-    title = models.CharField(max_length=255)
-    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name="threads")
-    content = models.TextField(default='')
+class Post(models.Model):
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
+    title = models.CharField(max_length=200)
+    content = models.TextField()
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='forum_posts')
+    attachment = models.FileField(
+        upload_to='post_attachments/%Y/%m/%d/',
+        blank=True,
+        null=True,
+        verbose_name='File đính kèm'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        verbose_name = "Thread"
-        verbose_name_plural = "Threads"
-        ordering = ["-created_at"]
+    is_published = models.BooleanField(default=True)
+    view_count = models.IntegerField(default=0)
 
     def __str__(self):
         return self.title
 
+    def filename(self):
+        """Lấy tên file từ đường dẫn"""
+        if self.attachment:
+            return os.path.basename(self.attachment.name)
+        return None
 
-class Post(models.Model):
-    thread = models.ForeignKey(Thread, on_delete=models.CASCADE, related_name="posts")
-    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name="posts")
-    content = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    def file_extension(self):
+        """Lấy phần mở rộng của file"""
+        if self.attachment:
+            filename = self.filename()
+            return filename.split('.')[-1].lower() if '.' in filename else ''
+        return ''
 
     class Meta:
-        verbose_name = "Post"
-        verbose_name_plural = "Posts"
-        ordering = ["created_at"]
+        ordering = ['-created_at']
+
+class Test(models.Model):
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    file = models.FileField(upload_to='tests/')
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Post by {self.author} on {self.thread}"
-    def _forum_latest_posts(self, limit=10):
-        """
-        Return the most recent posts in this forum (across all threads).
-        Default limit is 10.
-        """
-        return (
-            Post.objects
-            .filter(thread__forum=self)
-            .select_related("author", "thread")
-            .order_by("-created_at")[:limit]
-        )
+        return self.title
 
-    def _forum_new_posts(self, since=None):
-        """
-        Return posts in this forum created after `since`. If `since` is None,
-        default to posts from the last 24 hours.
-        """
-        if since is None:
-            since = timezone.now() - timedelta(days=1)
-        return (
-            Post.objects
-            .filter(thread__forum=self, created_at__gt=since)
-            .select_related("author", "thread")
-            .order_by("created_at")
-        )
+class Quiz(models.Model):
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='quizzes')
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    time_limit = models.IntegerField(help_text="Thời gian làm bài (phút)", default=30)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_published = models.BooleanField(default=True)
 
-    # Attach as methods on Forum
-    Forum.latest_posts = _forum_latest_posts
-    Forum.new_posts = _forum_new_posts
+    def __str__(self):
+        return self.title
+
+class Question(models.Model):
+    QUESTION_TYPES = [
+        ('multiple_choice', 'Trắc nghiệm'),
+        ('true_false', 'Đúng/Sai'),
+        ('short_answer', 'Trả lời ngắn'),
+    ]
+    
+    quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name='questions')
+    question_type = models.CharField(max_length=20, choices=QUESTION_TYPES, default='multiple_choice')
+    text = models.TextField()
+    explanation = models.TextField(blank=True, help_text="Giải thích đáp án")
+    order = models.IntegerField(default=0)
+    
+    class Meta:
+        ordering = ['order']
+    
+    def __str__(self):
+        return f"{self.quiz.title} - Câu {self.order}"
+
+class Option(models.Model):
+    question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='options')
+    text = models.CharField(max_length=500)
+    is_correct = models.BooleanField(default=False)
+    order = models.IntegerField(default=0)  # Thêm trường order
+    
+    class Meta:
+        ordering = ['order']
+    
+    def __str__(self):
+        return self.text
+
+class QuizAttempt(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE)
+    score = models.FloatField(default=0)
+    started_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.quiz.title}"
+
+class UserAnswer(models.Model):
+    attempt = models.ForeignKey(QuizAttempt, on_delete=models.CASCADE, related_name='user_answers')
+    question = models.ForeignKey(Question, on_delete=models.CASCADE)
+    selected_option = models.ForeignKey(Option, on_delete=models.CASCADE, null=True, blank=True)
+    text_answer = models.TextField(blank=True)
+    
+    def __str__(self):
+        return f"{self.attempt.user.username} - {self.question.text[:50]}"
+# Trong models.py, cập nhật model Test
+class Test(models.Model):
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    file = models.FileField(upload_to='tests/')
+    time_limit = models.IntegerField(
+        help_text="Thời gian làm bài (phút)", 
+        default=60,
+        blank=True,
+        null=True
+    )
+    due_date = models.DateTimeField(
+        help_text="Hạn nộp bài",
+        blank=True,
+        null=True
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.title
+
+    def is_active(self):
+        """Kiểm tra xem bài kiểm tra còn hiệu lực không"""
+        if self.due_date:
+            from django.utils import timezone
+            return timezone.now() <= self.due_date
+        return True
+    
+class TestSubmission(models.Model):
+    test = models.ForeignKey(Test, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    answer_file = models.FileField(upload_to='test_submissions/%Y/%m/%d/')
+    notes = models.TextField(blank=True)
+    submitted_at = models.DateTimeField(auto_now_add=True)
+    time_spent = models.IntegerField(help_text="Thời gian làm bài (giây)", default=0)
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.test.title}"
+    
+    class Meta:
+        ordering = ['-submitted_at']

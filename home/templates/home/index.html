@@ -1,0 +1,168 @@
+{% extends 'base.html' %}
+
+{% block title %}Trang chủ{% endblock %}
+
+{% block main %}
+
+<div class="container">
+  <div class="row g-4">
+    <div class="col-lg-8">
+      {% if user.is_authenticated %}
+      <h4 class="mb-3">Chào mừng trở lại, {{ user.first_name|default:user.username }}!</h4>
+      {% endif %}
+
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Gợi ý cho bạn</h5>
+        </div>
+        <div class="card-body">
+          <p class="text-muted">
+            {% if profile.major %}
+            Tài liệu thuộc chuyên ngành <strong>{{ profile.major.name }}</strong> có thể bạn quan tâm:
+            {% else %}
+            Một số tài liệu mới được tải lên:
+            {% endif %}
+          </p>
+          <div class="list-group">
+            {% for doc in suggested_items %}
+            <a href="{% url 'document:document_detail' doc.id %}" class="list-group-item list-group-item-action" target="_blank">
+              <div class="d-flex w-100 justify-content-between">
+                <h6 class="mb-1"><i class="bi bi-file-earmark-text me-1"></i>{{ doc.title }}</h6>
+                <small class="text-muted">{{ doc.uploaded_at|timesince }} trước</small>
+              </div>
+              <p class="mb-1 small">{{ doc.description|truncatewords:20 }}</p>
+              {% if doc.major %}<span class="badge bg-primary">{{ doc.major.name }}</span>{% endif %}
+              {% if doc.subject %}<span class="badge bg-secondary">{{ doc.subject.name }}</span>{% endif %}
+            </a>
+            {% empty %}
+            <p class="text-center text-muted p-3">Chưa có tài liệu nào phù hợp.</p>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-warning text-dark">
+          <h5 class="mb-0"><i class="bi bi-star-fill me-2"></i>Bài đăng nổi bật</h5>
+        </div>
+        <ul class="list-group list-group-flush">
+          <li class="list-group-item p-3 d-flex align-items-start">
+            <img src="https://placehold.co/40x40" class="rounded-circle me-3" alt="avatar">
+            <div class="flex-grow-1">
+              <a href="#" class="text-decoration-none fw-bold text-dark">Chia sẻ kinh nghiệm qua môn Giải tích 1 với điểm A?</a>
+              <div class="small text-muted mt-1">bởi <a href="#">tranvanb</a> • 2 giờ trước • trong <a href="#">Góc học tập</a></div>
+            </div>
+            <div class="text-end small text-muted ms-3">
+              <div><i class="bi bi-reply-fill me-1"></i>15 trả lời</div>
+              <div><i class="bi bi-hand-thumbs-up-fill me-1"></i>50 lượt thích</div>
+            </div>
+          </li>
+          <li class="list-group-item p-3 d-flex align-items-start">
+            <img src="https://placehold.co/40x40" class="rounded-circle me-3" alt="avatar">
+            <div class="flex-grow-1">
+              <a href="#" class="text-decoration-none fw-bold text-dark">[Hỏi] Nên chọn chuyên ngành nào trong khoa CNTT?</a>
+              <div class="small text-muted mt-1">bởi <a href="#">lethic</a> • 1 ngày trước • trong <a href="#">Định hướng nghề nghiệp</a></div>
+            </div>
+            <div class="text-end small text-muted ms-3">
+              <div><i class="bi bi-reply-fill me-1"></i>32 trả lời</div>
+              <div><i class="bi bi-hand-thumbs-up-fill me-1"></i>120 lượt thích</div>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <div class="card shadow-sm">
+        <div class="card-header bg-info text-white">
+          <h5 class="mb-0"><i class="bi bi-newspaper me-2"></i>Bài đăng mới nhất</h5>
+        </div>
+        <ul class="list-group list-group-flush">
+          <li class="list-group-item p-3 d-flex align-items-start">
+            <img src="https://placehold.co/40x40" class="rounded-circle me-3" alt="avatar">
+            <div class="flex-grow-1">
+              <a href="#" class="text-decoration-none fw-bold text-dark">Tìm nhóm làm đồ án môn Mạng máy tính</a>
+              <div class="small text-muted mt-1">bởi <a href="#">nguyenvana</a> • 5 phút trước • trong <a href="#">Tìm bạn học</a></div>
+            </div>
+            <div class="text-end small text-muted ms-3">
+              <div><i class="bi bi-reply-fill me-1"></i>0 trả lời</div>
+            </div>
+          </li>
+          <li class="list-group-item p-3 d-flex align-items-start">
+            <img src="https://placehold.co/40x40" class="rounded-circle me-3" alt="avatar">
+            <div class="flex-grow-1">
+              <a href="#" class="text-decoration-none fw-bold text-dark">Tài liệu ôn thi HĐH cần gấp!!!</a>
+              <div class="small text-muted mt-1">bởi <a href="#">hoangthid</a> • 15 phút trước • trong <a href="#">Xin tài liệu</a></div>
+            </div>
+            <div class="text-end small text-muted ms-3">
+              <div><i class="bi bi-reply-fill me-1"></i>2 trả lời</div>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="sticky-top" style="top: 20px;">
+        <div class="d-grid gap-4">
+          
+          {% if user.is_authenticated %}
+          <div class="card text-center shadow-sm">
+            <div class="card-body">
+              <h6 class="card-title text-muted">SỐ COIN HIỆN CÓ</h6>
+              <p class="card-text display-5 fw-bold text-primary" id="coinDisplay">
+                <i class="bi bi-coin"></i> {{ profile.coins|default:"0" }}
+              </p>
+              <a href="{% url 'accounts:wallet' %}" class="btn btn-sm btn-outline-primary">Lịch sử giao dịch</a>
+            </div>
+          </div>
+
+          <div class="card text-center shadow-sm bg-success text-white">
+            <form action="{% url 'accounts:checkin' %}" method="POST" class="mb-0">
+              {% csrf_token %}
+              <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-calendar-check me-2"></i>Điểm danh hằng ngày</h5>
+                <p class="small" id="checkInMessage">
+                  {% if can_checkin %}
+                  Nhận ngay 10 coin khi điểm danh hôm nay!
+                  {% else %}
+                  Bạn đã điểm danh hôm nay.
+                  {% endif %}
+                </p>
+                <button type="submit" class="btn btn-light fw-bold" {% if not can_checkin %}disabled{% endif %}>
+                  {% if can_checkin %}Điểm danh ngay{% else %}Đã điểm danh{% endif %}
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <div class="card shadow-sm">
+            <div class="card-header">
+              <h6 class="mb-0"><i class="bi bi-bell me-2"></i>Thông báo mới</h6>
+            </div>
+            <ul class="list-group list-group-flush">
+              <li class="list-group-item small">Bạn vừa nhận được 50 coin vì đạt điểm cao.</li>
+              <li class="list-group-item small">Tài liệu "Giải tích 1" của bạn có bình luận mới.</li>
+            </ul>
+          </div>
+          {% endif %}
+
+          <div class="card shadow-sm">
+            <div class="card-header bg-secondary text-white">
+              <h6 class="mb-0"><i class="bi bi-lightning me-2"></i>Liên kết nhanh</h6>
+            </div>
+            <div class="card-body">
+              <div class="d-grid gap-2">
+                {% if user.is_authenticated %}
+                <a href="#" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil-square me-1"></i>Viết bài mới</a>
+                {% endif %}
+                <a href="#" class="btn btn-outline-success btn-sm"><i class="bi bi-search me-1"></i>Tìm kiếm bài đăng</a>
+                <a href="#" class="btn btn-outline-info btn-sm"><i class="bi bi-question-circle me-1"></i>Trợ giúp</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

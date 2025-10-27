@@ -2,27 +2,25 @@
   <div class="container">
     <div class="d-flex justify-content-between align-items-center py-2">
       <!-- Logo bên trái -->
-      <a class="navbar-brand fw-bold text-custom-blue fs-4" href="{% url 'home' %}">
+      <a class="navbar-brand fw-bold text-custom-blue fs-4" href="{% url 'home:index' %}">
         <i class="bi bi-mortarboard-fill me-2"></i>PEPE
       </a>
 
       <!-- Phần đăng nhập/đăng ký hoặc tên người dùng bên phải -->
-      <div class="d-flex gap-2" id="authSection">
+      <div class="d-flex align-items-center gap-2" id="authSection">
         {% if user.is_authenticated %}
-        <div class="dropdown">
-          <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
-            <i class="bi bi-person-circle me-1"></i>{{ user.username }}
-          </button>
-          <ul class="dropdown-menu">
-            <li><a class="dropdown-item" href="#"><i class="bi bi-person me-2"></i>Hồ sơ</a></li>
-            <li><a class="dropdown-item" href="#"><i class="bi bi-gear me-2"></i>Cài đặt</a></li>
-            <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item text-danger" href="#"><i class="bi bi-box-arrow-right me-2"></i>Đăng xuất</a></li>
-          </ul>
-        </div>
+          <div class="dropdown">
+            <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+              <i class="bi bi-person-circle me-1"></i>{{ user.username }}
+            </button>
+            <a href="{% url 'accounts:logout' %}" class="btn btn-outline-danger btn-sm" title="Đăng xuất"
+              onclick="return confirm('Bạn có chắc chắn muốn đăng xuất không?');">
+              <i class="bi bi-box-arrow-right"></i>
+            </a>
+          </div>
         {% else %}
-        <a href="{% url 'login' %}" class="btn btn-outline-light btn-sm">Đăng nhập</a>
-        <a href="#" class="btn btn-primary btn-sm">Đăng ký</a>
+          <a href="{% url 'accounts:login' %}" class="btn btn-outline-light btn-sm">Đăng nhập</a>
+          <a href="{% url 'accounts:register' %}" class="btn btn-primary btn-sm">Đăng ký</a>
         {% endif %}
       </div>
     </div>

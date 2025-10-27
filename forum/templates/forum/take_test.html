@@ -1,0 +1,320 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Làm bài kiểm tra: {{ test.title }}{% endblock %}
+
+{% block main %}
+<div class="container">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{% url 'forum:index' %}" class="text-decoration-none">
+                    <i class="bi bi-house"></i> Diễn đàn
+                </a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{% url 'forum:subject_detail' test.subject.id %}" class="text-decoration-none">
+                    {{ test.subject.name }}
+                </a>
+            </li>
+            <li class="breadcrumb-item active">Làm bài kiểm tra</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                    <h4 class="card-title mb-0">
+                        <i class="bi bi-file-earmark-text"></i> {{ test.title }}
+                    </h4>
+                    <div id="timer" class="h4 mb-0">
+                        {% if test.time_limit %}
+                        {{ test.time_limit }}:00
+                        {% else %}
+                        60:00
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="card-body">
+                    <!-- Thông tin bài kiểm tra -->
+                    <div class="alert alert-info">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong><i class="bi bi-clock"></i> Thời gian làm bài:</strong> 
+                                {{ test.time_limit|default:"60" }} phút
+                            </div>
+                            <div class="col-md-6">
+                                <strong><i class="bi bi-calendar"></i> Hạn nộp bài:</strong> 
+                                {{ test.due_date|date:"d/m/Y H:i"|default:"Không có hạn" }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Mô tả bài kiểm tra -->
+                    {% if test.description %}
+                    <div class="mb-4">
+                        <h5>Mô tả:</h5>
+                        <p class="lead">{{ test.description }}</p>
+                    </div>
+                    {% endif %}
+
+                    <!-- File bài kiểm tra -->
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5>File bài kiểm tra:</h5>
+                            <a href="{{ test.file.url }}" class="btn btn-outline-primary btn-sm" download>
+                                <i class="bi bi-download"></i> Tải về
+                            </a>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-shrink-0">
+                                        {% if test.file.name|lower|slice:'-4:' == '.pdf' %}
+                                        <i class="bi bi-file-earmark-pdf text-danger fs-1"></i>
+                                        {% elif test.file.name|lower|slice:'-4:' == '.doc' or test.file.name|lower|slice:'-5:' == '.docx' %}
+                                        <i class="bi bi-file-earmark-word text-primary fs-1"></i>
+                                        {% elif test.file.name|lower|slice:'-4:' == '.txt' %}
+                                        <i class="bi bi-file-earmark-text text-secondary fs-1"></i>
+                                        {% else %}
+                                        <i class="bi bi-file-earmark fs-1 text-muted"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div class="flex-grow-1 ms-3">
+                                        <h6 class="mb-1">{{ test.file.name|slice:"6:" }}</h6>
+                                        <small class="text-muted">{{ test.file.size|filesizeformat }}</small>
+                                    </div>
+                                    <div>
+                                        <a href="{{ test.file.url }}" target="_blank" class="btn btn-outline-success btn-sm">
+                                            <i class="bi bi-eye"></i> Xem file
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Form nộp bài (nếu cần) -->
+                    <div class="card mt-4">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">
+                                <i class="bi bi-upload"></i> Nộp bài làm
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="post" enctype="multipart/form-data" id="submit-form">
+                                {% csrf_token %}
+                                <div class="mb-3">
+                                    <label for="answer_file" class="form-label fw-semibold">Upload bài làm của bạn</label>
+                                    <input type="file" class="form-control" id="answer_file" name="answer_file" 
+                                           accept=".pdf,.doc,.docx,.txt,.zip,.rar" required>
+                                    <div class="form-text">Định dạng: PDF, DOC, DOCX, TXT, ZIP, RAR (tối đa 10MB)</div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="notes" class="form-label fw-semibold">Ghi chú (tùy chọn)</label>
+                                    <textarea class="form-control" id="notes" name="notes" rows="3" 
+                                              placeholder="Thêm ghi chú cho bài làm của bạn..."></textarea>
+                                </div>
+
+                                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="pauseTest()">
+                                        <i class="bi bi-pause"></i> Tạm dừng
+                                    </button>
+                                    <button type="submit" class="btn btn-success" id="submit-btn">
+                                        <i class="bi bi-send-check"></i> Nộp bài
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-info-circle"></i> Thông tin bài kiểm tra
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled small">
+                        <li class="mb-2">
+                            <i class="bi bi-book me-2"></i>
+                            <strong>Môn học:</strong> {{ test.subject.name }}
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-clock me-2"></i>
+                            <strong>Thời gian:</strong> {{ test.time_limit|default:"60" }} phút
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-calendar me-2"></i>
+                            <strong>Hạn nộp:</strong> {{ test.due_date|date:"d/m/Y H:i"|default:"Không có hạn" }}
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-file-text me-2"></i>
+                            <strong>Định dạng:</strong> {{ test.file.name|slice:"-4:"|upper }}
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-person me-2"></i>
+                            <strong>Người đăng:</strong> Admin
+                        </li>
+                    </ul>
+                    
+                    <hr>
+                    
+                    <h6>Hướng dẫn:</h6>
+                    <ul class="small">
+                        <li>Tải file bài kiểm tra về và làm bài</li>
+                        <li>Upload bài làm trước khi hết giờ</li>
+                        <li>Chỉ nộp bài một lần duy nhất</li>
+                        <li>Kiểm tra kỹ file trước khi nộp</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Progress Timer -->
+            <div class="card shadow-sm mt-4">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-clock-history"></i> Tiến trình thời gian
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="progress mb-3" style="height: 20px;">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                             role="progressbar" id="progress-bar" style="width: 100%">
+                            100%
+                        </div>
+                    </div>
+                    <div class="text-center">
+                        <small class="text-muted" id="time-remaining">Thời gian còn lại: {{ test.time_limit|default:"60" }}:00</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript Timer -->
+<script>
+// Timer countdown
+let totalTime = {{ test.time_limit|default:60 }} * 60; // convert to seconds
+let timeLeft = totalTime;
+let isPaused = false;
+
+function updateTimer() {
+    if (isPaused) return;
+    
+    const minutes = Math.floor(timeLeft / 60);
+    const seconds = timeLeft % 60;
+    const progressPercent = (timeLeft / totalTime) * 100;
+    
+    // Update timer display
+    document.getElementById('timer').textContent = 
+        `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    
+    // Update progress bar
+    const progressBar = document.getElementById('progress-bar');
+    progressBar.style.width = `${progressPercent}%`;
+    progressBar.textContent = `${Math.round(progressPercent)}%`;
+    
+    // Update time remaining text
+    document.getElementById('time-remaining').textContent = 
+        `Thời gian còn lại: ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    
+    // Change color based on time remaining
+    if (progressPercent <= 25) {
+        progressBar.classList.remove('bg-warning');
+        progressBar.classList.add('bg-danger');
+    } else if (progressPercent <= 50) {
+        progressBar.classList.remove('bg-success', 'bg-danger');
+        progressBar.classList.add('bg-warning');
+    }
+    
+    if (timeLeft <= 0) {
+        // Auto-submit when time's up
+        document.getElementById('submit-form').submit();
+    } else {
+        timeLeft--;
+    }
+}
+
+function pauseTest() {
+    isPaused = !isPaused;
+    const pauseBtn = document.querySelector('button[onclick="pauseTest()"]');
+    
+    if (isPaused) {
+        pauseBtn.innerHTML = '<i class="bi bi-play"></i> Tiếp tục';
+        pauseBtn.classList.remove('btn-outline-secondary');
+        pauseBtn.classList.add('btn-outline-success');
+    } else {
+        pauseBtn.innerHTML = '<i class="bi bi-pause"></i> Tạm dừng';
+        pauseBtn.classList.remove('btn-outline-success');
+        pauseBtn.classList.add('btn-outline-secondary');
+    }
+}
+
+// Start timer
+setInterval(updateTimer, 1000);
+updateTimer(); // Initial call
+
+// Prevent accidental page reload
+window.addEventListener('beforeunload', function (e) {
+    if (timeLeft > 0 && !isPaused) {
+        e.preventDefault();
+        e.returnValue = 'Bài kiểm tra của bạn vẫn đang được tính giờ. Bạn có chắc chắn muốn rời đi?';
+    }
+});
+
+// File upload validation
+document.getElementById('submit-form').addEventListener('submit', function(e) {
+    const fileInput = document.getElementById('answer_file');
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    
+    if (fileInput.files.length > 0 && fileInput.files[0].size > maxSize) {
+        e.preventDefault();
+        alert('File không được lớn hơn 10MB!');
+        return false;
+    }
+    
+    // Disable submit button to prevent double submission
+    document.getElementById('submit-btn').disabled = true;
+    document.getElementById('submit-btn').innerHTML = '<i class="bi bi-hourglass-split"></i> Đang nộp...';
+});
+</script>
+
+<style>
+.progress-bar {
+    transition: width 1s linear;
+}
+
+.card {
+    transition: transform 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+#timer {
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+}
+
+.btn {
+    border-radius: 0.5rem;
+    transition: all 0.2s ease-in-out;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+}
+</style>
+{% endblock %}

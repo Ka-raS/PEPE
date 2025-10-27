@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+
+{% block main %}
+<div class="container-fluid">
+  <div class="row g-4">
+    
+    <!-- === CỘT BỘ LỌC (BÊN TRÁI) === -->
+    <div class="col-lg-3">
+      <div class="card shadow-sm sticky-top" style="top: 20px;">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0"><i class="bi bi-filter me-2"></i>Bộ lọc tìm kiếm</h5>
+        </div>
+        
+        <form method="GET" action="{% url 'search:search_home' %}">
+          <div class="card-body">
+            
+            <!-- Từ khóa -->
+            <div class="mb-3">
+              <label for="q" class="form-label fw-bold">Từ khóa</label>
+              <input type="text" class="form-control" name="q" id="q" value="{{ request.GET.q }}" placeholder="Tiêu đề, nội dung...">
+            </div>
+            
+            <!-- Môn học -->
+            <div class="mb-3">
+              <label for="subject" class="form-label fw-bold">Môn học</label>
+              <select name="subject" id="subject" class="form-select">
+                <option value="">-- Tất cả môn học --</option>
+                {% for sub in all_subjects %}
+                  <option value="{{ sub.id }}" {% if request.GET.subject == sub.id|stringformat:"s" %}selected{% endif %}>{{ sub.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <!-- Diễn đàn (chuyên mục con) -->
+            <div class="mb-3">
+              <label for="forum" class="form-label fw-bold">Diễn đàn</label>
+              <select name="forum" id="forum" class="form-select">
+                <option value="">-- Tất cả diễn đàn --</option>
+                {% for f in all_forums %}
+                  <option value="{{ f.id }}" {% if request.GET.forum == f.id|stringformat:"s" %}selected{% endif %}>{{ f.title }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            
+
+            <!-- Tác giả -->
+            <div class="mb-3">
+              <label for="author" class="form-label fw-bold">Tác giả</label>
+              <select name="author" id="author" class="form-select">
+                <option value="">-- Tất cả tác giả --</option>
+                {% for auth in all_authors %}
+                  <option value="{{ auth.id }}" {% if request.GET.author == auth.id|stringformat:"s" %}selected{% endif %}>{{ auth.username }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            
+            <!-- Khoảng ngày đăng -->
+            <div class="mb-3">
+              <label class="form-label fw-bold">Ngày đăng</label>
+              <div class="input-group">
+                <input type="date" name="date_from" class="form-control" title="Từ ngày" value="{{ request.GET.date_from }}">
+                <input type="date" name="date_to" class="form-control" title="Đến ngày" value="{{ request.GET.date_to }}">
+              </div>
+            </div>
+
+            <!-- Sắp xếp -->
+            <div class="mb-3">
+              <label for="sort" class="form-label fw-bold">Sắp xếp</label>
+              <select name="sort" id="sort" class="form-select">
+                <option value="newest" {% if request.GET.sort == 'newest' %}selected{% endif %}>Mới nhất</option>
+                <option value="oldest" {% if request.GET.sort == 'oldest' %}selected{% endif %}>Cũ nhất</option>
+                <option value="a-z" {% if request.GET.sort == 'a-z' %}selected{% endif %}>Tiêu đề A-Z</option>
+                <option value="z-a" {% if request.GET.sort == 'z-a' %}selected{% endif %}>Tiêu đề Z-A</option>
+              </select>
+            </div>
+
+          </div>
+          <div class="card-footer bg-light d-grid">
+            <button type="submit" class="btn btn-primary"><i class="bi bi-search me-2"></i>Áp dụng</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    
+    <!-- === CỘT KẾT QUẢ (BÊN PHẢI) === -->
+    <div class="col-lg-9">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h5 class="mb-3 border-bottom pb-2">
+            {% if results %}
+              Tìm thấy {{ results.paginator.count }} kết quả
+            {% else %}
+              Kết quả tìm kiếm
+            {% endif %}
+          </h5>
+          
+          <!-- Danh sách kết quả (lặp qua THREADS) -->
+          <div class="list-group list-group-flush">
+            {% for thread in results %}
+            <a href="#" class="list-group-item list-group-item-action forum-item p-3">
+              <div class="d-flex w-100 justify-content-between">
+                <h5 class="mb-1 fw-bold text-custom-blue">{{ thread.title }}</h5>
+                <small class="text-muted">{{ thread.created_at|date:"d/m/Y" }}</small>
+              </div>
+              
+              <div class="mb-2">
+                <span class="badge bg-success bg-opacity-75"><i class="bi bi-book me-1"></i>{{ thread.forum.subject.name }}</span>
+                <span class="badge bg-info bg-opacity-75"><i class="bi bi-chat-dots me-1"></i>{{ thread.forum.title }}</span>
+                {% if thread.lecturer %}<span class="badge bg-warning text-dark bg-opacity-75"><i class="bi bi-person-video3 me-1"></i>{{ thread.lecturer.name }}</span>{% endif %}
+              </div>
+              
+              <p class="mb-1 text-muted">{{ thread.content|truncatewords:30 }}</p>
+              
+              <small class="text-muted">Đăng bởi: <i class="bi bi-person me-1"></i>{{ thread.author.username }}</small>
+            </a>
+            {% empty %}
+            <div class="text-center py-5">
+              <i class="bi bi-inbox display-4 text-muted"></i>
+              <p class="text-muted mt-2">Không tìm thấy kết quả nào phù hợp.</p>
+              <p class="small">Vui lòng thử lại với bộ lọc khác.</p>
+            </div>
+            {% endfor %}
+          </div>
+          
+          <!-- Phân trang -->
+          {% if results.has_other_pages %}
+          <nav aria-label="Page navigation" class="mt-4">
+            <ul class="pagination justify-content-center">
+              {% if results.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ results.previous_page_number }}&{{ request.GET.urlencode | cut:'page=' }}">&laquo;</a></li>{% else %}<li class="page-item disabled"><span class="page-link">&laquo;</span></li>{% endif %}
+              {% for i in results.paginator.page_range %}{% if results.number == i %}<li class="page-item active"><span class="page-link">{{ i }}</span></li>{% else %}<li class="page-item"><a class="page-link" href="?page={{ i }}&{{ request.GET.urlencode | cut:'page=' }}">{{ i }}</a></li>{% endif %}{% endfor %}
+              {% if results.has_next %}<li class="page-item"><a class="page-link" href="?page={{ results.next_page_number }}&{{ request.GET.urlencode | cut:'page=' }}">&raquo;</a></li>{% else %}<li class="page-item disabled"><span class="page-link">&raquo;</span></li>{% endif %}
+            </ul>
+          </nav>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

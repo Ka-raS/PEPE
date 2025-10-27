@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+
+{% block title %}Hồ sơ cá nhân{% endblock %}
+
+{% block main %}
+
+<div class="container">
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="card shadow-sm">
+        <div class="card-body p-4">
+          <div class="d-flex flex-column flex-md-row align-items-center text-center text-md-start mb-4 pb-4 border-bottom">
+            <div class="position-relative">
+              <img src="https://placehold.co/120x120" class="rounded-circle border border-4 border-primary" alt="Avatar" style="width: 120px; height: 120px; object-fit: cover;">
+              <button class="btn btn-primary btn-sm rounded-circle position-absolute bottom-0 end-0" style="width: 35px; height: 35px;" onclick="document.getElementById('avatar-input').click();">
+                <i class="bi bi-camera-fill"></i>
+              </button>
+              <input type="file" id="avatar-input" class="d-none">
+            </div>
+            <div class="ms-md-4 mt-3 mt-md-0">
+              <h2 class="h3 mb-1" id="profile-header-name">Nguyễn Văn A</h2>
+              <p class="text-muted mb-2" id="profile-header-major">Sinh viên Khoa Công nghệ Thông tin</p>
+              <span class="badge bg-success"><i class="bi bi-patch-check-fill me-1"></i>Tài khoản đã xác thực</span>
+            </div>
+          </div>
+          <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+              <h5 class="mb-0">Thông tin cá nhân</h5>
+              <button class="btn btn-outline-primary btn-sm" id="edit-btn" onclick="toggleEditMode(true)">
+                <i class="bi bi-pencil-fill me-1"></i>Chỉnh sửa
+              </button>
+            </div>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold text-secondary">Họ và tên</label>
+                <p class="p-2 bg-body-secondary rounded border-start border-3 border-primary mb-0 info-value">Nguyễn Văn A</p>
+                <input type="text" class="form-control d-none info-input" value="Nguyễn Văn A">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold text-secondary">Tên đăng nhập</label>
+                <p class="p-2 bg-body-secondary rounded border-start border-3 border-primary mb-0 info-value">{{ user.username }}</p>
+                <input type="text" class="form-control d-none info-input" value="{{ user.username }}" disabled>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold text-secondary">Email</label>
+                <p class="p-2 bg-body-secondary rounded border-start border-3 border-primary mb-0 info-value">nguyenvana@email.com</p>
+                <input type="email" class="form-control d-none info-input" value="nguyenvana@email.com" disabled>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold text-secondary">Lớp</label>
+                <p class="p-2 bg-body-secondary rounded border-start border-3 border-primary mb-0 info-value">CNTT-K18</p>
+                <input type="text" class="form-control d-none info-input" value="CNTT-K18">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold text-secondary">Khoa</label>
+                <p class="p-2 bg-body-secondary rounded border-start border-3 border-primary mb-0 info-value">Công nghệ Thông tin</p>
+                <input type="text" class="form-control d-none info-input" value="Công nghệ Thông tin">
+              </div>
+            </div>
+            <div id="action-buttons" class="mt-4 d-none">
+              <button class="btn btn-primary" type="button" onclick="saveChanges()">
+                <i class="bi bi-save me-1"></i>Lưu thay đổi
+              </button>
+              <button class="btn btn-secondary ms-2" type="button" onclick="toggleEditMode(false)">Hủy</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="sticky-top" style="top: 20px;">
+        <div class="d-grid gap-4">
+          <div class="card shadow-sm">
+            <div class="card-header">
+              <h6 class="mb-0"><i class="bi bi-activity me-2"></i>Thống kê hoạt động</h6>
+            </div>
+            <ul class="list-group list-group-flush">
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                <span>Tài liệu đã tải lên</span>
+                <strong class="badge bg-primary rounded-pill">15</strong>
+              </li>
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                <span>Tổng coin đã kiếm</span>
+                <strong><i class="bi bi-coin"></i> 2,500</strong>
+              </li>
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                <span>Bài kiểm tra đã làm</span>
+                <strong class="badge bg-info rounded-pill">5</strong>
+              </li>
+            </ul>
+          </div>
+          <div class="card shadow-sm">
+            <div class="card-header">
+              <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>Hoạt động gần đây</h6>
+            </div>
+            <div class="card-body">
+              <ul class="list-unstyled small mb-0">
+                <li class="mb-2"><i class="bi bi-cloud-upload text-primary me-2"></i>Tải lên tài liệu "Đề cương Vi xử lý".</li>
+                <li class="mb-2"><i class="bi bi-pencil-square text-success me-2"></i>Hoàn thành bài kiểm tra CSDL.</li>
+                <li><i class="bi bi-download text-info me-2"></i>Tải về tài liệu "Slide Giải tích 1".</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}
+
+{% block script %}
+
+<script>
+  function toggleEditMode(isEditing) {
+    const editBtn = document.getElementById('edit-btn');
+    const actionBtns = document.getElementById('action-buttons');
+    const infoValues = document.querySelectorAll('.info-value');
+    const infoInputs = document.querySelectorAll('.info-input');
+
+    if (isEditing) {
+      editBtn.classList.add('d-none');
+      actionBtns.classList.remove('d-none');
+      infoValues.forEach(el => el.classList.add('d-none'));
+      infoInputs.forEach(el => {
+        if (!el.disabled) {
+          el.classList.remove('d-none');
+        }
+      });
+    } else {
+      editBtn.classList.remove('d-none');
+      actionBtns.classList.add('d-none');
+      infoValues.forEach(el => el.classList.remove('d-none'));
+      infoInputs.forEach(el => el.classList.add('d-none'));
+    }
+  }
+
+  function saveChanges() {
+    const infoItems = document.querySelectorAll('.col-md-6');
+    infoItems.forEach(item => {
+      const p = item.querySelector('.info-value');
+      const input = item.querySelector('.info-input');
+      if (p && input && !input.disabled) {
+        p.textContent = input.value;
+      }
+    });
+
+    const newName = document.querySelector('.col-md-6 .info-input').value;
+    const newMajor = "Sinh viên Khoa " + document.querySelectorAll('.col-md-6 .info-input')[4].value;
+    document.getElementById('profile-header-name').textContent = newName;
+    document.getElementById('profile-header-major').textContent = newMajor;
+    toggleEditMode(false);
+  }
+</script>
+
+{% endblock %}

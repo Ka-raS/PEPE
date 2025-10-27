@@ -1,0 +1,282 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block main %}
+<nav aria-label="breadcrumb" class="mb-4">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item">
+      <a href="{% url 'forum:index' %}" class="text-decoration-none"><i class="bi bi-house"></i> Diễn đàn</a>
+    </li>
+    {% if post %}
+    <li class="breadcrumb-item">
+      <a href="{% url 'forum:subject_detail' post.subject.id %}" class="text-decoration-none">{{ post.subject.name }}</a>
+    </li>
+    <li class="breadcrumb-item">
+      <a href="{% url 'forum:post_detail' post.id %}" class="text-decoration-none">{{ post.title|truncatewords:5 }}</a>
+    </li>
+    {% endif %}
+    <li class="breadcrumb-item active">{{ title }}</li>
+  </ol>
+</nav>
+
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="card shadow-lg border-0">
+      <div class="card-header bg-primary text-white py-3">
+        <div class="d-flex align-items-center">
+          <i class="bi bi-pencil-square fs-3 me-3"></i>
+          <div>
+            <h4 class="card-title mb-0 fw-bold">{{ title }}</h4>
+            <small class="opacity-75">
+              {% if post %}
+              Chỉnh sửa bài viết của bạn
+              {% else %}
+              Chia sẻ kiến thức với cộng đồng
+              {% endif %}
+            </small>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-body p-4">
+        <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+          {% csrf_token %}
+
+          <!-- Subject Field -->
+          <div class="mb-4">
+            <label for="{{ form.subject.id_for_label }}" class="form-label fw-semibold fs-6"><i class="bi bi-book me-2 text-primary"></i>Môn học</label>
+            {{ form.subject }}
+            {% if form.subject.errors %}
+            <div class="alert alert-danger mt-2 py-2">
+              <i class="bi bi-exclamation-triangle me-2"></i>
+              {% for error in form.subject.errors %}
+              {{ error }}
+              {% endfor %}
+            </div>
+            {% endif %}
+            <div class="form-text">Chọn môn học liên quan đến bài viết của bạn</div>
+          </div>
+
+          <!-- Title Field -->
+          <div class="mb-4">
+            <label for="{{ form.title.id_for_label }}" class="form-label fw-semibold fs-6"><i class="bi bi-chat-text me-2 text-primary"></i>Tiêu đề bài viết</label>
+            {{ form.title }}
+            {% if form.title.errors %}
+            <div class="alert alert-danger mt-2 py-2">
+              <i class="bi bi-exclamation-triangle me-2"></i>
+              {% for error in form.title.errors %}
+              {{ error }}
+              {% endfor %}
+            </div>
+            {% endif %}
+            <div class="form-text">Tiêu đề nên ngắn gọn và mô tả rõ nội dung bài viết</div>
+          </div>
+
+          <!-- Content Field -->
+          <div class="mb-4">
+            <label for="{{ form.content.id_for_label }}" class="form-label fw-semibold fs-6"><i class="bi bi-file-text me-2 text-primary"></i>Nội dung bài viết</label>
+            {{ form.content }}
+            {% if form.content.errors %}
+            <div class="alert alert-danger mt-2 py-2">
+              <i class="bi bi-exclamation-triangle me-2"></i>
+              {% for error in form.content.errors %}
+              {{ error }}
+              {% endfor %}
+            </div>
+            {% endif %}
+            <div class="form-text">Hãy chia sẻ kiến thức, thắc mắc hoặc kinh nghiệm của bạn</div>
+          </div>
+
+          <!-- File Attachment Section -->
+          <div class="mb-4">
+            <label for="{{ form.attachment.id_for_label }}" class="form-label fw-semibold fs-6"><i class="bi bi-paperclip me-2 text-primary"></i>File đính kèm</label>
+            <div class="input-group">{{ form.attachment }}</div>
+            {% if form.attachment.errors %}
+            <div class="alert alert-danger mt-2 py-2">
+              <i class="bi bi-exclamation-triangle me-2"></i>
+              {% for error in form.attachment.errors %}
+              {{ error }}
+              {% endfor %}
+            </div>
+            {% endif %}
+            <div class="form-text text-muted">
+              <i class="bi bi-info-circle me-1"></i>
+              Chấp nhận: PDF, DOC, DOCX, TXT, ZIP, RAR (tối đa 10MB)
+            </div>
+
+            <!-- Hiển thị file hiện tại nếu đang edit -->
+            {% if post and post.attachment %}
+            <div class="mt-3">
+              <div class="alert alert-info d-flex justify-content-between align-items-center p-3">
+                <div class="d-flex align-items-center">
+                  <i class="bi bi-file-earmark me-3 fs-4"></i>
+                  <div>
+                    <strong class="d-block">File hiện tại:</strong>
+                    <a href="{{ post.attachment.url }}" target="_blank" class="text-decoration-none"><i class="bi bi-download me-1"></i>{{ post.filename }}</a>
+                  </div>
+                </div>
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" name="attachment-clear" id="attachment-clear" />
+                  <label class="form-check-label small fw-semibold" for="attachment-clear">Xóa file</label>
+                </div>
+              </div>
+            </div>
+            {% endif %}
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+            <div>
+              {% if post %}
+              <a href="{% url 'forum:post_detail' post.id %}" class="btn btn-outline-secondary px-4"><i class="bi bi-arrow-left me-2"></i>Quay lại</a>
+              {% else %}
+              <a href="{% url 'forum:index' %}" class="btn btn-outline-secondary px-4"><i class="bi bi-arrow-left me-2"></i>Quay lại</a>
+              {% endif %}
+            </div>
+            <div class="btn-group">
+              {% if post %}
+              <a href="{% url 'forum:delete_post' post.id %}" class="btn btn-outline-danger px-3" onclick="return confirm('Bạn có chắc chắn muốn xóa bài viết này?')"><i class="bi bi-trash me-2"></i>Xóa</a>
+              {% endif %}
+              <button type="submit" class="btn btn-primary px-4 fw-semibold">
+                <i class="bi bi-send-check me-2"></i>
+                {% if post %}
+                Cập nhật bài viết
+                {% else %}
+                Đăng bài ngay
+                {% endif %}
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Help Section -->
+    <div class="card shadow-sm border-0 mt-4">
+      <div class="card-header bg-light">
+        <h6 class="mb-0"><i class="bi bi-lightbulb me-2 text-warning"></i>Mẹo viết bài hay</h6>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6">
+            <ul class="list-unstyled small">
+              <li class="mb-2">
+                <i class="bi bi-check-circle text-success me-2"></i>Tiêu đề rõ ràng, cụ thể
+              </li>
+              <li class="mb-2">
+                <i class="bi bi-check-circle text-success me-2"></i>Nội dung trình bày mạch lạc
+              </li>
+              <li class="mb-2">
+                <i class="bi bi-check-circle text-success me-2"></i>Sử dụng ngôn ngữ phù hợp
+              </li>
+            </ul>
+          </div>
+          <div class="col-md-6">
+            <ul class="list-unstyled small">
+              <li class="mb-2">
+                <i class="bi bi-check-circle text-success me-2"></i>Đính kèm file nếu cần thiết
+              </li>
+              <li class="mb-2">
+                <i class="bi bi-check-circle text-success me-2"></i>Chọn đúng môn học
+              </li>
+              <li class="mb-2">
+                <i class="bi bi-check-circle text-success me-2"></i>Kiểm tra lại trước khi đăng
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    // Add Bootstrap styling to form elements
+    const form = document.querySelector('form')
+    const inputs = form.querySelectorAll('input, select, textarea')
+
+    inputs.forEach((input) => {
+      input.classList.add('form-control')
+
+      // Add focus effects
+      input.addEventListener('focus', function () {
+        this.parentElement.classList.add('focused')
+      })
+
+      input.addEventListener('blur', function () {
+        this.parentElement.classList.remove('focused')
+      })
+    })
+
+    // Special styling for file input
+    const fileInput = document.querySelector('input[type="file"]')
+    if (fileInput) {
+      fileInput.classList.add('form-control')
+    }
+
+    // Special styling for select
+    const selectInput = document.querySelector('select')
+    if (selectInput) {
+      selectInput.classList.add('form-select')
+    }
+
+    // Add character counter for title
+    const titleInput = document.querySelector('#id_title')
+    if (titleInput) {
+      const counter = document.createElement('div')
+      counter.className = 'form-text text-end'
+      counter.innerHTML = '<span id="title-counter">0</span>/200 ký tự'
+      titleInput.parentElement.appendChild(counter)
+
+      titleInput.addEventListener('input', function () {
+        document.getElementById('title-counter').textContent = this.value.length
+      })
+
+      // Initialize counter
+      document.getElementById('title-counter').textContent = titleInput.value.length
+    }
+  })
+</script>
+{% endblock %}
+
+{% block style %}
+<style>
+  .form-control:focus,
+  .form-select:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+  }
+
+  .card {
+    transition: transform 0.2s ease-in-out;
+  }
+
+  .card:hover {
+    transform: translateY(-2px);
+  }
+
+  .breadcrumb {
+    background-color: #f8f9fa;
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+  }
+
+  .alert {
+    border: none;
+    border-radius: 0.5rem;
+  }
+
+  .btn {
+    border-radius: 0.5rem;
+    transition: all 0.2s ease-in-out;
+  }
+
+  .btn:hover {
+    transform: translateY(-1px);
+  }
+</style>
+{% endblock %}

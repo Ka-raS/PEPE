@@ -1,34 +1,52 @@
 from django.shortcuts import render
 from django.contrib.auth.models import User
+from django.utils import timezone
 
 from .models import ForumSection, Post
+from accounts.models import Profile
 
-def home_view(request):
-    """
-    View này chịu trách nhiệm lấy và hiển thị tất cả dữ liệu
-    cho trang chủ PEPE.
-    """
-    # 1. Lấy tất cả các chuyên mục và các diễn đàn con liên quan
-    # prefetch_related giúp tối ưu hóa, giảm số lượng truy vấn CSDL
-    sections = ForumSection.objects.prefetch_related('forum_set').all()
-    
-    # 2. Lấy dữ liệu cho hộp thống kê
-    post_count = Post.objects.count()
-    user_count = User.objects.count()
-    latest_user = User.objects.order_by('-date_joined').first() # Lấy user mới nhất
-    
-    # 3. Lấy dữ liệu cho hộp "Nội dung nổi bật"
-    # Ví dụ: Lấy 5 bài viết mới nhất
-    trending_posts = Post.objects.select_related('author', 'forum').order_by('-created_at')[:5]
+def index(request):
+    if request.user.is_authenticated:
+        # === Xử lý cho người dùng đã đăng nhập ===
+        profile, created = Profile.objects.get_or_create(user=request.user)
+        can_checkin = not profile.last_checkin == timezone.now().date()
 
-    # 4. Đóng gói tất cả dữ liệu vào một biến 'context' để gửi ra template
-    context = {
-        'sections': sections,
-        'post_count': post_count,
-        'user_count': user_count,
-        'latest_user': latest_user,
-        'trending_posts': trending_posts,
-    }
-    
-    # 5. Render file HTML và gửi context kèm theo
-    return render(request, 'home/home.html', context)
+        # Lấy dữ liệu riêng cho dashboard
+        # user_major = profile.major
+        # suggested_items = Document.objects.none()
+        # if user_major:
+        #     suggested_items = Document.objects.filter(major=user_major).order_by('-uploaded_at')[:5]
+
+        # Lấy dữ liệu bài đăng (dùng Thread)
+        # latest_threads = Thread.objects.select_related('author', 'forum').order_by('-created_at')[:5]
+        # featured_threads = Thread.objects.select_related('author', 'forum').filter(is_featured=True).order_by('-created_at')[:5]
+
+        # TẠO CONTEXT HOÀN CHỈNH
+        context = {
+            'profile': profile,
+            'can_checkin': can_checkin,
+            # 'suggested_items': suggested_items,
+            # 'latest_posts': latest_threads,     # Gửi threads vào biến template
+            # 'featured_posts': featured_threads, # Gửi threads vào biến template
+            # Thêm các biến khác nếu template cần (ví dụ: thông báo...)
+        }
+        return render(request, 'home/index.html', context)
+
+    else:
+        # === Xử lý cho khách ===
+        post_count = Post.objects.count()
+        user_count = User.objects.count()
+        latest_user = User.objects.order_by('-date_joined').first()
+
+        # latest_threads = Thread.objects.select_related('author', 'forum').order_by('-created_at')[:5]
+        # featured_threads = Thread.objects.select_related('author', 'forum').filter(is_featured=True).order_by('-created_at')[:5]
+
+        context = {
+            'post_count': post_count,
+            'user_count': user_count,
+            'latest_user': latest_user,
+        
+            # 'trending_posts': featured_threads, # Gửi featured threads vào biến template
+            # 'latest_posts': latest_threads,     # Gửi latest threads vào biến template
+        }
+        return render(request, 'home/index.html', context)

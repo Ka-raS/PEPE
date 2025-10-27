@@ -9,15 +9,3 @@
 .text-custom-blue {
     color: #3498db !important;
 }
-
-.forum-item:hover {
-    background-color: #f8f9fa;
-}
-
-.stats-card {
-    transition: transform 0.2s;
-}
-
-.stats-card:hover {
-    transform: translateY(-2px);
-}
