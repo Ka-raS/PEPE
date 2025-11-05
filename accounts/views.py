@@ -1,142 +1,218 @@
 from django.shortcuts import render, redirect
-from django.contrib.auth.models import User
-from django.shortcuts import render, redirect
-from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
-from django.contrib.auth.models import User
-from django.views.decorators.http import require_POST
-from django.core.validators import validate_email
-from django.core.exceptions import ValidationError
-from django.contrib.auth.decorators import login_required
-from django.utils import timezone
+from django.contrib.auth.hashers import make_password, check_password
+from django.db import connection
+
+# index, 
+# wallet ưu tiên thấp
+# referral ưu tiên thấp
+# checkin_view ưu tiên thấp
+
+# login_view xong
+# register_view xong
+# logout_view xong
+
 
 def index(request):
-    return render(request, 'accounts/index.html')
+    if not request.session.get('user_id'):
+        messages.warning(request, 'Vui lòng đăng nhập để tiếp tục')
+        return redirect('accounts:login')
 
-def wallet(request):
-    return render(request, 'accounts/wallet.html')
+    user_type = request.session.get('user_type')
+    
+    if user_type == 'student':
+        return redirect('home:index_student')
+    elif user_type == 'teacher':
+        return redirect('home:index_teacher')
+    
+    return render(request, 'home/index.html')
 
-def referral(request):
-    return render(request, 'accounts/referral.html')
+# context:
+#  profile,
+#  avatar_path (có thể None),
+#  full_name (first_name + first_name, None được),
+#  username,
+#  major (kéo từ database bằng major_id, None được)
+#  email
+#  all_majors (select name from bảng majors)
 
-def login_view(request):
+def index_student(request):
+    if not request.session.get('user_id'):
+        messages.warning(request, 'Vui lòng đăng nhập để tiếp tục')
+        return redirect('accounts:login')
+    
+    if request.session.get('user_type') != 'student':
+        messages.error(request, 'Chỉ sinh viên mới có quyền truy cập')
+        return redirect('home:index')
+    
+    user_id = request.session.get('user_id')
+    
+    # Xử lý POST - cập nhật thông tin
     if request.method == 'POST':
-        # 1. Đây là khi user nhấn nút submit
-        username = request.POST.get('username')
-        password = request.POST.get('password')
+        full_name = request.POST.get('full_name')
+        major_id = request.POST.get('major_id')
+        
+        # Tách first_name và last_name
+        name_parts = full_name.split(' ', 1) if full_name else ['', '']
+        first_name = name_parts[0] if len(name_parts) > 0 else None
+        last_name = name_parts[1] if len(name_parts) > 1 else None
+        
+        with connection.cursor() as cursor:
+            # Cập nhật profiles
+            cursor.execute("""
+                UPDATE profiles 
+                SET first_name = %s, last_name = %s
+                WHERE id = %s
+            """, [first_name, last_name, user_id])
+            
+            # Cập nhật hoặc insert students
+            cursor.execute("SELECT id FROM students WHERE id = %s", [user_id])
+            if cursor.fetchone():
+                cursor.execute("""
+                    UPDATE students SET major_id = %s WHERE id = %s
+                """, [major_id if major_id else None, user_id])
+            else:
+                cursor.execute("""
+                    INSERT INTO students (id, major_id) VALUES (%s, %s)
+                """, [user_id, major_id if major_id else None])
+        
+        messages.success(request, 'Cập nhật thông tin thành công!')
+        return redirect('home:index')
+    
+    # GET - lấy dữ liệu hiển thị
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT 
+                p.username, p.email, p.first_name, p.last_name,
+                s.coins, 
+                s.major_id,
+                m.name AS major_name
+            FROM profiles p
+            LEFT JOIN students s ON p.id = s.id
+            LEFT JOIN majors m ON s.major_id = m.id
+            WHERE p.id = %s
+        """, [user_id])
+        data = cursor.fetchone()
+        
+        # Lấy danh sách majors
+        cursor.execute("SELECT * FROM majors ORDER BY name")
+        all_major = [{'id': row[0], 'name': row[1]} for row in cursor.fetchall()]
 
-        if not username or not password:
-            messages.error(request, 'Vui lòng nhập tên đăng nhập và mật khẩu.')
-            return render(request, 'accounts/login.html')
+    # Xử lý dữ liệu
+    username    = data[0] if data else ''
+    email       = data[1] if data else ''
+    first_name  = data[2] if data else ''
+    last_name   = data[3] if data else ''
+    full_name   = f"{first_name} {last_name}".strip() if first_name or last_name else ''
+    current_major_id = data[5] if data and len(data) > 6 else None
+    major_name  = data[6] if data and len(data) > 7 else None
+    coins       = data[4] if data else 0
+    
+    
+    tests_taken = 0 
+    uploads_count = 0
+    # with connection.cursor() as cursor:
+    #     # Giả sử bạn có bảng 'forum_testsubmission'
+    #     sql_tests = "SELECT COUNT(id) FROM forum_testsubmission WHERE user_id = %s"
+    #     cursor.execute(sql_tests, [user_id])
+    #     tests_row = cursor.fetchone()
+    #     if tests_row:
+    #         tests_taken = tests_row[0]
+            
+    context = {
+        'username': username,
+        'email': email,
+        'full_name': full_name,
+        'major_name': major_name,
+        'current_major_id': current_major_id,
+        'all_major': all_major,
+        'coins': coins,
+        'tests_taken': tests_taken,
+        'uploads_count': uploads_count
+    }
+    
+    return render(request, 'accounts/index_student.html', context)
 
-        # 2. Xác thực
-        user = authenticate(request, username=username, password=password)
 
-        if user is not None:
-            # 3. Đăng nhập
-            login(request, user)
-            # 4. Chuyển hướng về trang chủ
-            return redirect('home:index') 
-        else:
-            # 5. Báo lỗi
-            messages.error(request, 'Tên đăng nhập hoặc mật khẩu không chính xác.')
-            return render(request, 'accounts/login.html')
-
-    else:
-        # 2. Đây là khi user mới vào trang (GET request)
-        #    Chỉ cần hiển thị template
-        return render(request, 'accounts/login.html')
-
-# API mà JavaScript sẽ gọi
 def register_view(request):
     if request.method != 'POST':
         return render(request, 'accounts/register.html')
     
-    # Nếu là POST (user đã nhấn nút submit)
-
-    # 1. Lấy dữ liệu từ form (dùng request.POST)
-    username = request.POST.get('username')
-    email = request.POST.get('email')
-    password = request.POST.get('password')
-    password_confirm = request.POST.get('password_confirm')
-    first_name = request.POST.get('first_name', '')
-    last_name = request.POST.get('last_name', '')
-
-    # 2. Xác thực (Validation)
-    has_errors = False
+    username    = request.POST.get('username')
+    email       = request.POST.get('email')
+    password    = request.POST.get('password')
+    password2   = request.POST.get('password_con')
+    first_name  = request.POST.get('first_name') or None
+    last_name   = request.POST.get('last_name') or None
+    user_type   = request.POST.get('user_type', 'student')
     
-    if not username:
-        messages.error(request, 'Tên đăng nhập là bắt buộc.')
-        has_errors = True
-    if not email:
-        messages.error(request, 'Email là bắt buộc.')
-        has_errors = True
-    if not password:
-        messages.error(request, 'Mật khẩu là bắt buộc.')
-        has_errors = True
-    if len(password) < 6:
-        messages.error(request, 'Mật khẩu phải có ít nhất 6 ký tự.')
-        has_errors = True
-    if password != password_confirm:
-        messages.error(request, 'Mật khẩu không khớp.')
-        has_errors = True
-    
-    # Kiểm tra username đã tồn tại
-    if User.objects.filter(username=username).exists():
-        messages.error(request, 'Tên đăng nhập này đã được sử dụng.')
-        has_errors = True
+    print(password, password2)  # TEST
 
-    # Kiểm tra email hợp lệ và đã tồn tại
-    try:
-        validate_email(email)
-        if User.objects.filter(email=email).exists():
-            messages.error(request, 'Địa chỉ email này đã được đăng ký.')
-            has_errors = True
-    except ValidationError:
-        messages.error(request, 'Vui lòng nhập một địa chỉ email hợp lệ.')
-        has_errors = True
-
-    # 3. Nếu có lỗi, render lại trang và hiển thị lỗi
-    if has_errors:
-        # Dữ liệu cũ sẽ không bị mất (nhưng bạn cần thêm
-        # value="{{ request.POST.username }}" vào thẻ input nếu muốn)
+    # Validation
+    if password != password2:
+        messages.error(request, 'Mật khẩu không khớp')
         return render(request, 'accounts/register.html')
     
-    # 4. Nếu không có lỗi, tạo User
-    user = User.objects.create_user(username=username, email=email, password=password)
-    user.first_name = first_name
-    user.last_name = last_name
-    user.save()
-
-    # 5. Gửi thông báo thành công và chuyển hướng
-    messages.success(request, 'Đăng ký thành công! Vui lòng đăng nhập.')
-    return redirect('accounts:login') # Chuyển về trang login
+    if len(password) < 6:
+        messages.error(request, 'Mật khẩu phải có ít nhất 6 ký tự')
+        return render(request, 'accounts/register.html')
     
-def logout_view(request):
-    logout(request)
-    messages.success(request, "Bạn đã đăng xuất thành công.")
-    return redirect('home:index') # Chuyển hướng về trang chủ
+    # Hash password
+    hashed_password = make_password(password)
+    
+    try:
+        with connection.cursor() as cursor:
+            # Kiểm tra username/email đã tồn tại
+            cursor.execute("""
+                SELECT id FROM profiles WHERE username = %s OR email = %s
+            """, [username, email])
+            if cursor.fetchone():
+                messages.error(request, 'Tên đăng nhập hoặc email đã tồn tại')
+                return render(request, 'accounts/register.html')
+            
+            # Tạo profile mới
+            cursor.execute("""
+                INSERT INTO profiles (username, email, password, first_name, last_name, user_type)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, [username, email, hashed_password, first_name, last_name, user_type])
+            
+        messages.success(request, 'Đăng ký thành công! Vui lòng đăng nhập.')
+        return redirect('accounts:login')
+        
+    except Exception as e:
+        messages.error(request, f'Lỗi: {str(e)}')
+        return render(request, 'accounts/register.html')    
 
-@login_required
-@require_POST # Chỉ cho phép truy cập bằng POST
-def checkin_view(request):
-    # Lấy profile, tự động tạo nếu chưa có
-    profile = request.user.profile
-    today = timezone.now().date()
-    COIN_REWARD = 10 
 
-    # 1. Kiểm tra logic
-    if profile.last_checkin == today:
-        # Gửi thông báo lỗi
-        messages.error(request, 'Bạn đã điểm danh hôm nay rồi!')
+def login_view(request):
+    if request.method != 'POST':
+        return render(request, 'accounts/login.html')
+
+    username = request.POST.get('username')
+    password = request.POST.get('password')
+    
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT id, username, password, email, first_name, last_name, user_type 
+            FROM profiles 
+            WHERE username = %s
+        """, [username])
+        user_data = cursor.fetchone()
+        
+    if user_data and check_password(password, user_data[2]):
+        # Lưu thông tin user vào session
+        request.session['user_id']   = user_data[0]
+        request.session['username']  = user_data[1]
+        request.session['email']     = user_data[3]
+        request.session['user_type'] = user_data[6]
+        
+        messages.success(request, f'Xin chào {user_data[1]}!')
+        return redirect('home:index')
     else:
-        # 2. Cộng coin, cập nhật ngày và lưu
-        profile.coins += COIN_REWARD
-        profile.last_checkin = today
-        profile.save()
-        # Gửi thông báo thành công
-        messages.success(request, f'Bạn đã điểm danh thành công và nhận được {COIN_REWARD} coin!')
+        messages.error(request, 'Tên đăng nhập hoặc mật khẩu không đúng')
+        return render(request, 'accounts/login.html')
 
-    # 3. Luôn luôn chuyển hướng về trang chủ
-    # Trình duyệt sẽ tải lại trang chủ
+def logout_view(request):
+    request.session.flush()
+    messages.success(request, 'Đã đăng xuất!')
     return redirect('home:index')

@@ -28,11 +28,74 @@ class ProfileUpdateForm(forms.ModelForm):
         # fields = ['major', 'student_class'] # Bỏ comment student_class nếu dùng
         fields = ['major'] # Chỉ có major nếu student_class bị comment trong model
 
-# --- FORM CẬP NHẬT AVATAR ---
+# --- FORM CẬP NHẬT AVATAR cho sinh vien---
 class AvatarUpdateForm(forms.ModelForm):
     # Dùng widget mặc định hoặc tùy chỉnh nếu cần
     avatar = forms.ImageField(required=True, label="Chọn ảnh đại diện mới") 
 
     class Meta:
         model = Profile
+        fields = ['avatar']
+
+
+# accounts/forms.py
+from django import forms
+from django.contrib.auth.models import User
+# Import các model mới
+from .models import Profile, Major, TeacherProfile, Faculty
+# Import model Subject
+from forum.models import Subject
+
+# ... (UserUpdateForm, ProfileUpdateForm, AvatarUpdateForm giữ nguyên) ...
+
+# 4. FORM MỚI CHO CẬP NHẬT HỒ SƠ GIẢNG VIÊN
+class TeacherProfileForm(forms.ModelForm):
+    # Lấy danh sách Khoa
+    faculty = forms.ModelChoiceField(
+        queryset=Faculty.objects.all(),
+        required=False,
+        label="Khoa",
+        empty_label="-- Chọn Khoa --",
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    
+    # Dùng lựa chọn từ model
+    degree = forms.ChoiceField(
+        choices=TeacherProfile.DEGREE_CHOICES,
+        required=False,
+        label="Học vị",
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    
+    position = forms.CharField(
+        max_length=100, 
+        required=False, 
+        label="Chức danh",
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    
+    experience_years = forms.IntegerField(
+        min_value=0, 
+        required=False, 
+        label="Năm kinh nghiệm",
+        widget=forms.NumberInput(attrs={'class': 'form-control'})
+    )
+    
+    # Trường chọn nhiều môn học
+    subjects_taught = forms.ModelMultipleChoiceField(
+        queryset=Subject.objects.all(),
+        required=False,
+        widget=forms.SelectMultiple(attrs={'class': 'form-select', 'size': '5'}), # Hiển thị 5 dòng
+        label="Môn học giảng dạy"
+    )
+
+    class Meta:
+        model = TeacherProfile
+        fields = ['faculty', 'degree', 'position', 'experience_years', 'subjects_taught']
+
+
+class TeacherAvatarUpdateForm(forms.ModelForm):
+    avatar = forms.ImageField(required=True, label="Chọn ảnh đại diện mới")
+    class Meta:
+        model = TeacherProfile # <-- Dùng cho GIẢNG VIÊN
         fields = ['avatar']

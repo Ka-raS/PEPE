@@ -1,7 +1,8 @@
 import os
-from django.forms import inlineformset_factory
+
 from django import forms
-from .models import Post, Subject
+from django.forms import inlineformset_factory
+from .models import Post, Subject, Test, Quiz, Question, Option
 
 class PostForm(forms.ModelForm):
     class Meta:
@@ -49,10 +50,6 @@ class PostForm(forms.ModelForm):
                     f"Chỉ chấp nhận các file: {', '.join(allowed_extensions)}"
                 )
         return attachment
-# Thêm vào forms.py
-from .models import Test, Quiz, Question, Option
-from django import forms
-
 class TestForm(forms.ModelForm):
     class Meta:
         model = Test

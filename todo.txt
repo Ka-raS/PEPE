@@ -1,8 +1,6 @@
 - Fix lại điểm danh
-- Chuyển wallet sang app riêng
-- Kiểm tra home index.html mới
+- Chuyển wallet sang app riêng // thôi
 - Làm coin
-- Điểm danh ở Ví coin
 - Gợi ý tài liệu ở Home
 - Thông báo ở Home
 - Thêm search
