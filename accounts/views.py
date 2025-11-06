@@ -1,6 +1,6 @@
+import hashlib
 from django.shortcuts import render, redirect
 from django.contrib import messages
-from django.contrib.auth.hashers import make_password, check_password
 from django.db import connection
 
 # index, 
@@ -12,6 +12,12 @@ from django.db import connection
 # register_view xong
 # logout_view xong
 
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def verify_password(password, hashed):
+    return hash_password(password) == hashed
+
 
 def index(request):
     if not request.session.get('user_id'):
@@ -21,11 +27,12 @@ def index(request):
     user_type = request.session.get('user_type')
     
     if user_type == 'student':
-        return redirect('home:index_student')
+        return redirect('accounts:index_student')
     elif user_type == 'teacher':
-        return redirect('home:index_teacher')
+        return redirect('accounts:index_teacher')
     
-    return render(request, 'home/index.html')
+    messages.error(request, 'Loại tài khoản không hợp lệ')
+    return redirect('accounts:logout')
 
 # context:
 #  profile,
@@ -66,25 +73,34 @@ def index_student(request):
             """, [first_name, last_name, user_id])
             
             # Cập nhật hoặc insert students
-            cursor.execute("SELECT id FROM students WHERE id = %s", [user_id])
+            cursor.execute("""
+                SELECT id 
+                FROM students 
+                WHERE id = %s
+            """, [user_id])
             if cursor.fetchone():
                 cursor.execute("""
-                    UPDATE students SET major_id = %s WHERE id = %s
+                    UPDATE students 
+                    SET major_id = %s 
+                    WHERE id = %s
                 """, [major_id if major_id else None, user_id])
             else:
                 cursor.execute("""
-                    INSERT INTO students (id, major_id) VALUES (%s, %s)
+                    INSERT INTO students (id, major_id) 
+                    VALUES (%s, %s)
                 """, [user_id, major_id if major_id else None])
         
         messages.success(request, 'Cập nhật thông tin thành công!')
-        return redirect('home:index')
+        return redirect('accounts:index_student')
     
     # GET - lấy dữ liệu hiển thị
+    context = {'is_authenticated': True}
+
     with connection.cursor() as cursor:
         cursor.execute("""
             SELECT 
                 p.username, p.email, p.first_name, p.last_name,
-                s.coins, 
+                COALESCE(s.coins, 0) AS coins,
                 s.major_id,
                 m.name AS major_name
             FROM profiles p
@@ -96,21 +112,21 @@ def index_student(request):
         
         # Lấy danh sách majors
         cursor.execute("SELECT * FROM majors ORDER BY name")
-        all_major = [{'id': row[0], 'name': row[1]} for row in cursor.fetchall()]
+        context['all_major'] = [{'id': row[0], 'name': row[1]} for row in cursor.fetchall()]
 
     # Xử lý dữ liệu
-    username    = data[0] if data else ''
-    email       = data[1] if data else ''
-    first_name  = data[2] if data else ''
-    last_name   = data[3] if data else ''
-    full_name   = f"{first_name} {last_name}".strip() if first_name or last_name else ''
-    current_major_id = data[5] if data and len(data) > 6 else None
-    major_name  = data[6] if data and len(data) > 7 else None
-    coins       = data[4] if data else 0
-    
-    
-    tests_taken = 0 
-    uploads_count = 0
+    context['username']         = data[0] 
+    context['email']            = data[1] 
+    context['first_name']       = data[2] or ''
+    context['last_name']        = data[3] or ''
+    context['full_name']        = f"{context['first_name']} {context['last_name']}".strip()
+    context['coins']            = data[4]
+    context['current_major_id'] = data[5]
+    context['major_name']       = data[6]
+
+    context['tests_taken']      = 0
+    context['uploads_count']    = 0
+
     # with connection.cursor() as cursor:
     #     # Giả sử bạn có bảng 'forum_testsubmission'
     #     sql_tests = "SELECT COUNT(id) FROM forum_testsubmission WHERE user_id = %s"
@@ -118,19 +134,7 @@ def index_student(request):
     #     tests_row = cursor.fetchone()
     #     if tests_row:
     #         tests_taken = tests_row[0]
-            
-    context = {
-        'username': username,
-        'email': email,
-        'full_name': full_name,
-        'major_name': major_name,
-        'current_major_id': current_major_id,
-        'all_major': all_major,
-        'coins': coins,
-        'tests_taken': tests_taken,
-        'uploads_count': uploads_count
-    }
-    
+
     return render(request, 'accounts/index_student.html', context)
 
 
@@ -138,18 +142,16 @@ def register_view(request):
     if request.method != 'POST':
         return render(request, 'accounts/register.html')
     
-    username    = request.POST.get('username')
-    email       = request.POST.get('email')
-    password    = request.POST.get('password')
-    password2   = request.POST.get('password_con')
-    first_name  = request.POST.get('first_name') or None
-    last_name   = request.POST.get('last_name') or None
-    user_type   = request.POST.get('user_type', 'student')
+    username           = request.POST.get('username')
+    email              = request.POST.get('email')
+    password           = request.POST.get('password')
+    password_confirm   = request.POST.get('password_confirm')
+    first_name         = request.POST.get('first_name') or None
+    last_name          = request.POST.get('last_name') or None
+    user_type          = request.POST.get('user_type', 'student')
     
-    print(password, password2)  # TEST
-
     # Validation
-    if password != password2:
+    if password != password_confirm:
         messages.error(request, 'Mật khẩu không khớp')
         return render(request, 'accounts/register.html')
     
@@ -157,14 +159,16 @@ def register_view(request):
         messages.error(request, 'Mật khẩu phải có ít nhất 6 ký tự')
         return render(request, 'accounts/register.html')
     
-    # Hash password
-    hashed_password = make_password(password)
+    hashed_password = hash_password(password)
     
     try:
         with connection.cursor() as cursor:
             # Kiểm tra username/email đã tồn tại
             cursor.execute("""
-                SELECT id FROM profiles WHERE username = %s OR email = %s
+                SELECT id 
+                FROM profiles 
+                WHERE username = %s 
+                OR email = %s
             """, [username, email])
             if cursor.fetchone():
                 messages.error(request, 'Tên đăng nhập hoặc email đã tồn tại')
@@ -172,7 +176,8 @@ def register_view(request):
             
             # Tạo profile mới
             cursor.execute("""
-                INSERT INTO profiles (username, email, password, first_name, last_name, user_type)
+                INSERT INTO profiles 
+                    (username, email, password, first_name, last_name, user_type)
                 VALUES (%s, %s, %s, %s, %s, %s)
             """, [username, email, hashed_password, first_name, last_name, user_type])
             
@@ -199,18 +204,20 @@ def login_view(request):
         """, [username])
         user_data = cursor.fetchone()
         
-    if user_data and check_password(password, user_data[2]):
-        # Lưu thông tin user vào session
-        request.session['user_id']   = user_data[0]
-        request.session['username']  = user_data[1]
-        request.session['email']     = user_data[3]
-        request.session['user_type'] = user_data[6]
-        
-        messages.success(request, f'Xin chào {user_data[1]}!')
-        return redirect('home:index')
-    else:
+    if not user_data or not verify_password(password, user_data[2]):
         messages.error(request, 'Tên đăng nhập hoặc mật khẩu không đúng')
         return render(request, 'accounts/login.html')
+    
+    # Lưu thông tin user vào session
+    request.session['is_authenticated'] = True
+    request.session['user_id']   = user_data[0]
+    request.session['username']  = user_data[1]
+    request.session['email']     = user_data[3]
+    request.session['user_type'] = user_data[6]
+    
+    messages.success(request, f'Xin chào {request.session['username']}!')
+    return redirect('home:index')
+
 
 def logout_view(request):
     request.session.flush()

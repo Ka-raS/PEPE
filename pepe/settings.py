@@ -12,7 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
-from pathlib import Path
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -41,17 +41,19 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = FILE_UPLOAD_MAX_MEMORY_SIZE
 # Application definition
 
 INSTALLED_APPS = [
-    'accounts',
-    'forum',
-    'home',
-    'search',
+    "accounts",
+    "forum",
+    "home",
+    "search",
 
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+
+    # TODO: phải xóa
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
-    "django.contrib.messages",
-    "django.contrib.staticfiles",
 ]
 
 MIDDLEWARE = [

@@ -10,13 +10,14 @@ A web forum
 ## How to Run
 
 1. Clone:
-    From the main branch with ORM:
+
+    From the main branch (with ORM):
     ```bash
     $ git clone --branch main https://github.com/Ka-raS/PEPE.git
     $ cd PEPE
     ```
 
-    Or from the rawsql branch without ORM:
+    Or from the rawsql branch (without ORM):
     ```bash
     $ git clone --branch rawsql https://github.com/Ka-raS/PEPE.git
     $ cd PEPE
@@ -29,7 +30,8 @@ A web forum
     $ pip install -r requirements.txt
     ```
 
-3. Run:
+3. Create `example.sqlite3` and Run Server:
     ```bash
+    $ python manage.py migrate
     $ python manage.py runserver
     ```
