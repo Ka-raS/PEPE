@@ -1,0 +1,363 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Hồ sơ cá nhân - {% if user_type == 'student' %}Sinh viên{% else %}Giảng viên{% endif %}{% endblock %}
+
+{% block main %}
+
+{% if messages %}
+  {% for message in messages %}
+    <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-success{% endif %} alert-dismissible fade show" role="alert">
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  {% endfor %}
+{% endif %}
+
+<div class="row g-4">
+
+  <div class="col-lg-8">
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+
+        <div class="d-flex flex-column flex-md-row align-items-center text-center text-md-start mb-4 pb-4 border-bottom">
+          <form id="avatar-form" method="POST" action="{% url 'accounts:update_avatar' %}" enctype="multipart/form-data" class="position-relative me-md-4 mb-3 mb-md-0">
+            {% csrf_token %}
+            {% if avatar_path %}
+              <img id="avatar-preview" src="{{ avatar_path }}" class="rounded-circle profile-avatar" alt="Avatar">
+            {% else %}
+              <div id="avatar-preview" class="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center profile-avatar">
+                <i class="bi bi-person-fill" style="font-size: 3rem;"></i>
+              </div>
+            {% endif %}
+            <input type="file" name="avatar" id="avatar-input" accept="image/*" class="d-none">
+            <label for="avatar-input" class="btn btn-primary btn-sm rounded-circle position-absolute bottom-0 end-0" style="width: 35px; height: 35px; cursor: pointer;" title="Đổi ảnh đại diện">
+              <i class="bi bi-camera-fill"></i>
+            </label>
+          </form>
+
+          <div class="mt-3 mt-md-0">
+            <h2 id="profile-header-name" class="h3 mb-1">{{ full_name|default:username }}</h2>
+            <p id="profile-header-role" class="text-muted mb-2">
+              {% if user_type == 'student' %}
+                {% if major_name %}
+                  Sinh viên Khoa {{ major_name }}
+                {% else %}
+                  Chưa cập nhật chuyên ngành
+                {% endif %}
+              {% else %}
+                {% if title %}
+                  {{ title }}
+                {% else %}
+                  Chưa cập nhật học vị 
+                {% endif %}
+              {% endif %}
+            </p>
+            <span class="badge bg-success"><i class="bi bi-patch-check-fill me-1"></i>Tài khoản đã xác thực</span>
+          </div>
+        </div>
+
+        <form method="POST" action="{% url 'accounts:index' %}">
+          {% csrf_token %}
+          <div class="info-section">
+            <div class="section-header">
+              <h5 class="mb-0">Thông tin cá nhân</h5>
+              {% if not request.GET.edit %}
+              <a href="?edit=true" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-pencil-fill me-1"></i>Chỉnh sửa
+              </a>
+              {% endif %}
+            </div>
+
+            <div class="info-grid">
+              <div class="info-item">
+                <label>Họ và tên</label>
+                {% if request.GET.edit %}
+                  <input type="text" name="full_name" class="form-control" value="{{ full_name|default:'' }}">
+                {% else %}
+                  <p class="info-value">{{ full_name|default:"Chưa cập nhật" }}</p>
+                {% endif %}
+              </div>
+
+              <div class="info-item">
+                <label>Tên đăng nhập</label>
+                <p class="info-value">{{ username }}</p>
+              </div>
+
+              <div class="info-item">
+                <label>Email</label>
+                <p class="info-value">{{ email }}</p>
+              </div>
+
+              {% if user_type == 'student' %}
+                <!-- Thông tin Sinh viên -->
+                <div class="info-item">
+                  <label>Chuyên ngành</label>
+                  {% if request.GET.edit %}
+                    <select name="major_id" class="form-control">
+                      <option value="">-- Chọn ngành --</option>
+                      {% for i_major in all_major %}
+                        <option value="{{ i_major.id }}" {% if i_major.id == current_major_id %}selected{% endif %}>
+                          {{ i_major.name }}
+                        </option>
+                      {% endfor %}
+                    </select>
+                  {% else %}
+                    <p class="info-value">{{ major_name|default:"Chưa cập nhật" }}</p>
+                  {% endif %}
+                </div>
+
+                <div class="info-item">
+                  <label>Sinh viên năm</label>
+                  {% if request.GET.edit %}
+                    <select name="enrollment_year" class="form-control">
+                      <option value="">-- Chọn năm --</option>
+                      <option value="1" {% if year_of_study == 1 %}selected{% endif %}>Năm 1</option>
+                      <option value="2" {% if year_of_study == 2 %}selected{% endif %}>Năm 2</option>
+                      <option value="3" {% if year_of_study == 3 %}selected{% endif %}>Năm 3</option>
+                      <option value="4" {% if year_of_study == 4 %}selected{% endif %}>Năm 4</option>
+                      <option value="5" {% if year_of_study == 5 %}selected{% endif %}>Năm 5</option>
+                      <option value="6" {% if year_of_study == 6 %}selected{% endif %}>Năm 6</option>
+                    </select>
+                  {% else %}
+                    <p class="info-value">
+                      {% if year_of_study %}
+                        Năm {{ year_of_study }}
+                      {% else %}
+                        Chưa cập nhật
+                      {% endif %}
+                    </p>
+                  {% endif %}
+                </div>
+              {% else %}
+                <!-- Thông tin Giảng viên -->
+                <div class="info-item">
+                  <label>Học vị</label>
+                  {% if request.GET.edit %}
+                    <select name="title" class="form-control">
+                      <option value="Cử nhân" {% if title == "Cử nhân" %}selected{% endif %}>Cử nhân</option>
+                      <option value="Thạc sĩ" {% if title == "Thạc sĩ" %}selected{% endif %}>Thạc sĩ</option>
+                      <option value="Tiến sĩ" {% if title == "Tiến sĩ" %}selected{% endif %}>Tiến sĩ</option>
+                      <option value="Giáo sư" {% if title == "Giáo sư" %}selected{% endif %}>Giáo sư</option>
+                      <option value="Phó Giáo sư" {% if title == "Phó Giáo sư" %}selected{% endif %}>Phó Giáo sư</option>
+                    </select>
+                  {% else %}
+                    <p class="info-value">{{ title|default:"Chưa cập nhật" }}</p>
+                  {% endif %}
+                </div>
+
+                <div class="info-item">
+                  <label>Khoa</label>
+                  {% if request.GET.edit %}
+                    <select name="department" class="form-control">
+                      <option value="">-- Chọn khoa --</option>
+                      {% for dep in all_departments %}
+                        <option value="{{ dep.id }}" {% if dep.id == current_department_id %}selected{% endif %}>{{ dep.name }}</option>
+                      {% endfor %}
+                    </select>
+                  {% else %}
+                    <p class="info-value">
+                      {% for dep in all_departments %}
+                        {% if dep.id == current_department_id %}
+                          {{ dep.name }}
+                        {% endif %}
+                      {% empty %}
+                        Chưa cập nhật
+                      {% endfor %}
+                    </p>
+                  {% endif %}
+                </div>
+
+                <div class="info-item">
+                  <label>Môn học giảng dạy</label>
+                  {% if request.GET.edit %}
+                    <select name="subjects_taught" class="form-control" multiple style="height: 120px;">
+                      {% for subject in all_subjects %}
+                        <option value="{{ subject.id }}" {% if subject.id in current_subject_ids %}selected{% endif %}>
+                          {{ subject.name }}
+                        </option>
+                      {% empty %}
+                        <option disabled>Không có môn học nào</option>
+                      {% endfor %}
+                    </select>
+                    <small class="text-muted">Giữ Ctrl để chọn nhiều môn học</small>
+                  {% else %}
+                    <div class="info-value">
+                      {% if subjects_taught_names %}
+                        <div class="subject-badges">
+                          {% for subject in subjects_taught_names %}
+                            <span class="badge bg-primary subject-badge">{{ subject }}</span>
+                          {% endfor %}
+                        </div>
+                      {% else %}
+                        Chưa cập nhật môn học
+                      {% endif %}
+                    </div>
+                  {% endif %}
+                </div>
+              {% endif %}
+            </div>
+
+            {% if request.GET.edit %}
+            <div class="mt-4 pt-3 border-top">
+              <button class="btn btn-primary" type="submit">
+                <i class="bi bi-save me-2"></i>Lưu thay đổi
+              </button>
+              <a href="?" class="btn btn-secondary ms-2">
+                <i class="bi bi-x-circle me-2"></i>Hủy bỏ
+              </a>
+            </div>
+            {% endif %}
+          </div>
+        </form>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="sticky-top" style="top: 20px;">
+      <div class="d-grid gap-4">
+
+        <div class="card shadow-sm">
+          <div class="card-header">
+            <h6 class="mb-0"><i class="bi bi-activity me-2"></i>Thống kê hoạt động</h6>
+          </div>
+          <ul class="list-group list-group-flush">
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <span>Tài liệu đã tải lên</span>
+              <strong class="badge bg-primary rounded-pill">{{ stats.uploads }}</strong>
+            </li>
+            
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <span>
+                {% if user_type == 'student' %}
+                  Bài kiểm tra đã làm
+                {% else %}
+                  Bài kiểm tra đã tạo
+                {% endif %}
+              </span>
+              <strong class="badge bg-info rounded-pill">{{ stats.tests }}</strong>
+            </li>
+          </ul>
+        </div>
+
+        <div class="card shadow-sm">
+          <div class="card-header">
+            <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>Hoạt động gần đây</h6>
+          </div>
+          <div class="card-body">
+            <ul class="list-unstyled small mb-0">
+              {% if recent_activities %}
+                {% for activity in recent_activities %}
+                  <li class="mb-2">
+                    <i class="{{ activity.icon }} me-2"></i>{{ activity.text }}
+                    {% if activity.time %}
+                      <br><small class="text-muted">{{ activity.time|date:"d/m/Y H:i" }}</small>
+                    {% endif %}
+                  </li>
+                {% endfor %}
+              {% else %}
+                {% if user_type == 'student' %}
+                  <li class="mb-2"><i class="bi bi-cloud-upload text-primary me-2"></i>Chưa có hoạt động nào gần đây</li>
+                  <li class="mb-2"><i class="bi bi-pencil-square text-success me-2"></i>Hãy tham gia các hoạt động học tập</li>
+                {% else %}
+                  <li class="mb-2"><i class="bi bi-cloud-upload text-primary me-2"></i>Chưa có hoạt động nào gần đây</li>
+                  <li class="mb-2"><i class="bi bi-plus-circle text-success me-2"></i>Hãy tạo bài kiểm tra hoặc tài liệu</li>
+                {% endif %}
+              {% endif %}
+            </ul>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block style %}
+<style>
+  body { background-color: #f8f9fa; }
+
+  .profile-avatar {
+    width: 120px;
+    height: 120px;
+    object-fit: cover;
+    border: 4px solid var(--bs-primary);
+    display: block;
+    margin-bottom: 0.5rem;
+  }
+
+  .info-section { margin-bottom: 2rem; }
+
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #dee2e6;
+  }
+
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .info-item label {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 0.25rem;
+    display: block;
+  }
+
+  .info-value {
+    padding: 0.75rem;
+    background: #f1f3f5;
+    border-radius: 0.375rem;
+    border-left: 4px solid var(--bs-primary);
+    min-height: auto;
+    display: block;
+  }
+
+  /* Style cho môn học giảng dạy (chỉ Giảng viên) */
+  .subject-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .subject-badge {
+    font-size: 0.875rem;
+    padding: 0.375rem 0.75rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  select[multiple] {
+    min-height: 120px;
+    width: 100%;
+  }
+
+  /* Đảm bảo responsive */
+  @media (max-width: 768px) {
+    .info-grid {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+    
+    .subject-badges {
+      gap: 0.375rem;
+    }
+    
+    .subject-badge {
+      font-size: 0.8rem;
+      padding: 0.25rem 0.5rem;
+    }
+  }
+</style>
+{% endblock %}

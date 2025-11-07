@@ -1,0 +1,333 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Tạo Bài Kiểm Tra Mới{% endblock %}
+
+{% block main %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{% url 'forum:index' %}" class="text-decoration-none">
+                    <i class="bi bi-house"></i> Diễn đàn
+                </a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{% url 'forum:subject_detail' subject_id %}" class="text-decoration-none">
+                    Môn học
+                </a>
+            </li>
+            <li class="breadcrumb-item active">Tạo bài kiểm tra</li>
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-lg border-0">
+                <div class="card-header bg-success text-white py-3">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-file-earmark-text fs-3 me-3"></i>
+                        <div>
+                            <h4 class="card-title mb-0 fw-bold">Tạo Bài Kiểm Tra Mới</h4>
+                            <small class="opacity-75">Tạo bài kiểm tra có thời gian và hạn nộp</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-body p-4">
+                    <!-- Thông tin môn học -->
+                    <div class="alert alert-info mb-4">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-book fs-4 me-3"></i>
+                            <div>
+                                <h5 class="alert-heading mb-1">Thông tin môn học</h5>
+                                <p class="mb-0">
+                                    <strong>Môn học:</strong> 
+                                    <span id="subject-name">Đang tải...</span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <!-- Tiêu đề -->
+                        <div class="mb-4">
+                            <label for="title" class="form-label fw-semibold">
+                                Tiêu đề bài kiểm tra <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control form-control-lg" id="title" name="title" 
+                                   placeholder="Nhập tiêu đề bài kiểm tra..." required
+                                   maxlength="200">
+                            <div class="form-text">Tiêu đề nên ngắn gọn và mô tả rõ nội dung bài kiểm tra</div>
+                        </div>
+
+                        <!-- Mô tả -->
+                        <div class="mb-4">
+                            <label for="content" class="form-label fw-semibold">Mô tả bài kiểm tra</label>
+                            <textarea class="form-control" id="content" name="content" rows="4"
+                                      placeholder="Mô tả chi tiết về bài kiểm tra, yêu cầu, hướng dẫn làm bài..."></textarea>
+                            <div class="form-text">Cung cấp thông tin hữu ích cho người làm bài</div>
+                        </div>
+
+                        <div class="row">
+                            <!-- Thời gian làm bài -->
+                            <div class="col-md-6 mb-4">
+                                <label for="time_limit" class="form-label fw-semibold">
+                                    Thời gian làm bài (phút)
+                                </label>
+                                <input type="number" class="form-control" id="time_limit" name="time_limit" 
+                                       value="60" min="1" max="480" required>
+                                <div class="form-text">Thời gian tối đa để hoàn thành bài kiểm tra</div>
+                            </div>
+
+                            <!-- Số lần làm bài tối đa -->
+                            <div class="col-md-6 mb-4">
+                                <label for="max_attempts" class="form-label fw-semibold">
+                                    Số lần làm bài tối đa
+                                </label>
+                                <input type="number" class="form-control" id="max_attempts" name="max_attempts" 
+                                       value="1" min="1" max="10" required>
+                                <div class="form-text">Số lần người dùng được phép làm bài kiểm tra</div>
+                            </div>
+                        </div>
+
+                        <!-- Hạn nộp bài -->
+                        <div class="mb-4">
+                            <label for="due_date" class="form-label fw-semibold">Hạn nộp bài</label>
+                            <input type="datetime-local" class="form-control" id="due_date" name="due_date">
+                            <div class="form-text">
+                                Để trống nếu bài kiểm tra không có hạn nộp cụ thể
+                            </div>
+                        </div>
+
+                        <!-- Thông báo lỗi -->
+                        {% if messages %}
+                        <div class="alert alert-danger">
+                            <h6 class="alert-heading mb-2">Có lỗi xảy ra:</h6>
+                            <ul class="mb-0">
+                                {% for message in messages %}
+                                <li>{{ message }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+
+                        <!-- Nút hành động -->
+                        <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                            <a href="{% url 'forum:subject_detail' subject_id %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left"></i> Quay lại
+                            </a>
+                            <div>
+                                <button type="reset" class="btn btn-outline-danger me-2">
+                                    <i class="bi bi-arrow-clockwise"></i> Đặt lại
+                                </button>
+                                <button type="submit" class="btn btn-success">
+                                    <i class="bi bi-check-circle"></i> Tạo bài kiểm tra
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Hướng dẫn -->
+            <div class="card shadow-sm mt-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-info-circle"></i> Hướng dẫn tạo bài kiểm tra
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Thông tin cơ bản:</h6>
+                            <ul class="small">
+                                <li>Tiêu đề nên rõ ràng và mô tả đúng nội dung</li>
+                                <li>Mô tả giúp người học hiểu rõ yêu cầu bài kiểm tra</li>
+                                <li>Đặt thời gian phù hợp với độ khó của bài</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Thiết lập thời gian:</h6>
+                            <ul class="small">
+                                <li>Thời gian làm bài: 1-480 phút</li>
+                                <li>Số lần làm bài: 1-10 lần</li>
+                                <li>Hạn nộp bài: Có thể để mở không giới hạn thời gian</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="alert alert-warning mt-3 small">
+                        <strong>Lưu ý:</strong> Sau khi tạo bài kiểm tra, bạn có thể thêm câu hỏi từ ngân hàng câu hỏi hoặc tạo câu hỏi mới.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+{% endblock %}
+
+<style>
+.card {
+    border: none;
+    border-radius: 15px;
+}
+
+.card-header {
+    border-radius: 15px 15px 0 0 !important;
+}
+
+.form-control {
+    border-radius: 10px;
+    border: 2px solid #e9ecef;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus {
+    border-color: #198754;
+    box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25);
+}
+
+.btn {
+    border-radius: 10px;
+    padding: 10px 20px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #198754, #157347);
+    border: none;
+}
+
+.btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(25, 135, 84, 0.4);
+}
+
+.alert {
+    border-radius: 10px;
+    border: none;
+}
+
+.breadcrumb {
+    background: none;
+    padding: 0;
+}
+
+.breadcrumb-item a {
+    color: #6c757d;
+    text-decoration: none;
+}
+
+.breadcrumb-item a:hover {
+    color: #198754;
+}
+
+.breadcrumb-item.active {
+    color: #198754;
+    font-weight: 500;
+}
+
+.subject-info {
+    background: linear-gradient(135deg, #e3f2fd, #f3e5f5);
+    border-left: 4px solid #2196f3;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Lấy thông tin môn học từ server
+    function loadSubjectInfo() {
+        fetch(`/api/subject/{{ subject_id }}/`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('subject-name').textContent = data.subject.name;
+                    document.getElementById('subject-description').textContent = data.subject.description;
+                }
+            })
+            .catch(error => {
+                console.error('Lỗi khi tải thông tin môn học:', error);
+                document.getElementById('subject-name').textContent = 'Không thể tải thông tin';
+            });
+    }
+
+    // Gọi hàm load thông tin môn học
+    loadSubjectInfo();
+
+    // Đặt min datetime cho hạn nộp bài (ngày hiện tại)
+    const dueDateInput = document.getEslementById('due_date');
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    
+    dueDateInput.min = `${year}-${month}-${day}T${hours}:${minutes}`;
+    
+    // Validate form
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        const title = document.getElementById('title').value.trim();
+        const timeLimit = document.getElementById('time_limit').value;
+        const maxAttempts = document.getElementById('max_attempts').value;
+        
+        let errors = [];
+        
+        if (!title) {
+            errors.push('Tiêu đề không được để trống');
+        }
+        
+        if (timeLimit < 1 || timeLimit > 480) {
+            errors.push('Thời gian làm bài phải từ 1 đến 480 phút');
+        }
+        
+        if (maxAttempts < 1 || maxAttempts > 10) {
+            errors.push('Số lần làm bài phải từ 1 đến 10 lần');
+        }
+        
+        if (errors.length > 0) {
+            e.preventDefault();
+            alert('Lỗi:\n' + errors.join('\n'));
+        }
+    });
+    
+    // Character counter for title
+    const titleInput = document.getElementById('title');
+    const titleCounter = document.createElement('div');
+    titleCounter.className = 'form-text text-end';
+    titleCounter.textContent = '0/200 ký tự';
+    titleInput.parentNode.appendChild(titleCounter);
+    
+    titleInput.addEventListener('input', function() {
+        titleCounter.textContent = `${this.value.length}/200 ký tự`;
+        if (this.value.length > 180) {
+            titleCounter.className = 'form-text text-end text-warning';
+        } else {
+            titleCounter.className = 'form-text text-end';
+        }
+    });
+    
+    // Character counter for content
+    const contentInput = document.getElementById('content');
+    const contentCounter = document.createElement('div');
+    contentCounter.className = 'form-text text-end';
+    contentCounter.textContent = '0 ký tự';
+    contentInput.parentNode.appendChild(contentCounter);
+    
+    contentInput.addEventListener('input', function() {
+        contentCounter.textContent = `${this.value.length} ký tự`;
+        if (this.value.length > 49000) {
+            contentCounter.className = 'form-text text-end text-danger';
+        } else if (this.value.length > 45000) {
+            contentCounter.className = 'form-text text-end text-warning';
+        } else {
+            contentCounter.className = 'form-text text-end';
+        }
+    });
+});
+</script>

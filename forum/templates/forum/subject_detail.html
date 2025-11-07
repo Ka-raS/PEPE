@@ -28,9 +28,6 @@
                 <a href="{% url 'forum:create_post' %}?subject_id={{ subject.id }}" class="btn btn-primary">
                     <i class="bi bi-plus-circle"></i> Bài viết mới
                 </a>
-                <button class="btn btn-outline-secondary">
-                    <i class="bi bi-bell"></i> Theo dõi
-                </button>
             </div>
         </div>
     </div>
@@ -45,7 +42,7 @@
                 <h5 class="card-title mb-0">
                     <i class="bi bi-chat-text text-primary"></i> Bài viết mới nhất
                 </h5>
-                <span class="badge bg-primary">{{ posts.count }} bài viết</span>
+                <span class="badge bg-primary">{{ posts|length }} bài viết</span>
             </div>
             <div class="card-body p-0">
                 {% for post in posts %}
@@ -116,15 +113,20 @@
 
     <!-- Sidebar -->
     <div class="col-lg-4">
-        <!-- Tests Section -->
+        <!-- Tests Section (Gộp cả tests và quizzes) -->
         <div class="card shadow-sm mb-4">
             <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">
-                    <i class="bi bi-file-earmark-text text-success"></i> Bài kiểm tra
+                    <i class="bi bi-file-earmark-text text-success"></i> Bài kiểm tra & Trắc nghiệm
                 </h5>
-                <a href="{% url 'forum:create_test' %}?subject_id={{ subject.id }}" class="btn btn-success btn-sm">
-                    <i class="bi bi-plus"></i> Thêm
-                </a>
+                <div class="d-flex gap-1">
+                    <a href="{% url 'forum:create_test' subject.id %}" class="btn btn-success btn-sm">
+                        <i class="bi bi-plus"></i> Thêm
+                    </a>
+                    <a href="{% url 'forum:question_bank' subject.id %}" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-collection"></i> Ngân hàng câu hỏi
+                    </a>
+                </div>
             </div>
             <div class="card-body">
                 {% for test in tests %}
@@ -134,11 +136,17 @@
                             <h6 class="fw-bold mb-1">{{ test.title }}</h6>
                             <p class="small text-muted mb-2">{{ test.description|truncatewords:15 }}</p>
                             
-                            <!-- Thông tin thời gian -->
-                            <div class="d-flex flex-wrap gap-3 small">
+                            <!-- Thông tin bài kiểm tra -->
+                            <div class="d-flex flex-wrap gap-2 small mb-2">
                                 {% if test.time_limit %}
                                 <span class="badge bg-info text-dark">
                                     <i class="bi bi-clock"></i> {{ test.time_limit }} phút
+                                </span>
+                                {% endif %}
+                                
+                                {% if test.max_attempts > 0 %}
+                                <span class="badge bg-secondary">
+                                    <i class="bi bi-arrow-repeat"></i> {{ test.max_attempts }} lượt
                                 </span>
                                 {% endif %}
                                 
@@ -149,9 +157,27 @@
                                 </span>
                                 {% endif %}
                             </div>
+
+                            <!-- Trạng thái bài kiểm tra -->
+                            <div class="d-flex align-items-center">
+                                {% if test.is_active %}
+                                <span class="badge bg-success me-2">
+                                    <i class="bi bi-check-circle"></i> Đang mở
+                                </span>
+                                {% else %}
+                                <span class="badge bg-danger me-2">
+                                    <i class="bi bi-x-circle"></i> Đã đóng
+                                </span>
+                                {% endif %}
+                                
+                                <small class="text-muted">
+                                    <i class="bi bi-calendar-event"></i> 
+                                    Tạo: {{ test.created_at|date:"d/m/Y" }}
+                                </small>
+                            </div>
                         </div>
                         
-                        <div class="btn-group ms-3">
+                        <div class="btn-group ms-3 flex-shrink-0">
                             {% if test.is_active %}
                             <a href="{% url 'forum:take_test' test.id %}" class="btn btn-outline-success btn-sm">
                                 <i class="bi bi-play-circle"></i> Làm bài
@@ -162,8 +188,8 @@
                             </button>
                             {% endif %}
                             
-                            <a href="{{ test.file.url }}" class="btn btn-outline-primary btn-sm" download>
-                                <i class="bi bi-download"></i>
+                            <a href="{% url 'forum:test_detail' test.id %}" class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-eye"></i>
                             </a>
                         </div>
                     </div>
@@ -172,66 +198,14 @@
                 <div class="text-center py-4">
                     <i class="bi bi-file-earmark-text display-4 text-muted"></i>
                     <p class="text-muted mt-2 small">Chưa có bài kiểm tra nào</p>
-                    <a href="{% url 'forum:create_test' %}?subject_id={{ subject.id }}" class="btn btn-success btn-sm">
-                        <i class="bi bi-plus"></i> Tạo bài kiểm tra đầu tiên
-                    </a>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-
-        <!-- Quizzes Section -->
-        <div class="card shadow-sm mb-4">
-            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0">
-                    <i class="bi bi-patch-question text-warning"></i> Bài trắc nghiệm
-                </h5>
-                <a href="{% url 'forum:create_quiz' %}?subject_id={{ subject.id }}" class="btn btn-warning btn-sm">
-                    <i class="bi bi-plus"></i> Thêm
-                </a>
-            </div>
-            <div class="card-body">
-                {% for quiz in quizzes %}
-                <div class="mb-3 pb-3 border-bottom">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div class="flex-grow-1">
-                            <h6 class="fw-bold mb-1">{{ quiz.title }}</h6>
-                            <p class="small text-muted mb-2">{{ quiz.description|truncatewords:10 }}</p>
-                            
-                            <!-- Thông tin quiz -->
-                            <div class="d-flex flex-wrap gap-3 small">
-                                <span class="badge bg-primary">
-                                    <i class="bi bi-clock"></i> {{ quiz.time_limit }} phút
-                                </span>
-                                <span class="badge bg-secondary">
-                                    <i class="bi bi-question-circle"></i> {{ quiz.questions.count }} câu
-                                </span>
-                                <span class="badge bg-info">
-                                    <i class="bi bi-people"></i> {{ quiz.quizattempt_set.count }} lượt làm
-                                </span>
-                            </div>
-                        </div>
-                        
-                        <div class="ms-3">
-                            {% if active_attempt %}
-                            <a href="{% url 'forum:take_quiz' active_attempt.id %}" class="btn btn-warning btn-sm">
-                                <i class="bi bi-play-circle"></i> Tiếp tục
-                            </a>
-                            {% else %}
-                            <a href="{% url 'forum:start_quiz' quiz.id %}" class="btn btn-outline-warning btn-sm">
-                                <i class="bi bi-play-circle"></i> Làm bài
-                            </a>
-                            {% endif %}
-                        </div>
+                    <div class="d-flex gap-2 justify-content-center">
+                        <a href="{% url 'forum:create_test' subject.id %}" class="btn btn-success btn-sm">
+                            <i class="bi bi-plus"></i> Tạo bài kiểm tra
+                        </a>
+                        <a href="{% url 'forum:create_question' subject.id %}" class="btn btn-primary btn-sm">
+                            <i class="bi bi-plus-circle"></i> Thêm câu hỏi
+                        </a>
                     </div>
-                </div>
-                {% empty %}
-                <div class="text-center py-4">
-                    <i class="bi bi-patch-question display-4 text-muted"></i>
-                    <p class="text-muted mt-2 small">Chưa có bài trắc nghiệm nào</p>
-                    <a href="{% url 'forum:create_quiz' %}?subject_id={{ subject.id }}" class="btn btn-warning btn-sm">
-                        <i class="bi bi-plus"></i> Tạo bài trắc nghiệm đầu tiên
-                    </a>
                 </div>
                 {% endfor %}
             </div>
@@ -253,22 +227,29 @@
                         <span>Viết bài mới</span>
                     </a>
                     
-                    <!-- Đăng bài kiểm tra - TÍNH NĂNG MỚI -->
-                    <a href="{% url 'forum:create_test' %}?subject_id={{ subject.id }}" 
+                    <!-- Tạo bài kiểm tra -->
+                    <a href="{% url 'forum:create_test' subject.id %}" 
                        class="btn btn-outline-success btn-sm d-flex align-items-center justify-content-center">
                         <i class="bi bi-file-earmark-text me-2"></i>
-                        <span>Đăng bài kiểm tra</span>
+                        <span>Tạo bài kiểm tra</span>
                     </a>
                     
-                    <!-- Tạo bài trắc nghiệm - TÍNH NĂNG MỚI -->
-                    <a href="{% url 'forum:create_quiz' %}?subject_id={{ subject.id }}" 
+                    <!-- Thêm câu hỏi -->
+                    <a href="{% url 'forum:create_question' subject.id %}" 
                        class="btn btn-outline-warning btn-sm d-flex align-items-center justify-content-center">
-                        <i class="bi bi-patch-question me-2"></i>
-                        <span>Tạo bài trắc nghiệm</span>
+                        <i class="bi bi-plus-circle me-2"></i>
+                        <span>Thêm câu hỏi</span>
+                    </a>
+                    
+                    <!-- Ngân hàng câu hỏi -->
+                    <a href="{% url 'forum:question_bank' subject.id %}" 
+                       class="btn btn-outline-info btn-sm d-flex align-items-center justify-content-center">
+                        <i class="bi bi-collection me-2"></i>
+                        <span>Ngân hàng câu hỏi</span>
                     </a>
                     
                     <!-- Chia sẻ diễn đàn -->
-                    <button class="btn btn-outline-info btn-sm d-flex align-items-center justify-content-center"
+                    <button class="btn btn-outline-secondary btn-sm d-flex align-items-center justify-content-center"
                             onclick="shareForum()">
                         <i class="bi bi-share me-2"></i>
                         <span>Chia sẻ diễn đàn</span>
@@ -279,11 +260,17 @@
                 <div class="mt-3 p-2 bg-light rounded small">
                     <div class="d-flex justify-content-between align-items-center">
                         <span class="text-muted">Bài kiểm tra đang mở:</span>
-                        <span class="badge bg-success">{{ tests.count }}</span>
+                        <span class="badge bg-success">
+                            {{ tests|length }} bài
+                        </span>
                     </div>
                     <div class="d-flex justify-content-between align-items-center mt-1">
-                        <span class="text-muted">Bài trắc nghiệm:</span>
-                        <span class="badge bg-warning">{{ quizzes.count }}</span>
+                        <span class="text-muted">Bài viết:</span>
+                        <span class="badge bg-primary">{{ posts|length }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-1">
+                        <span class="text-muted">Thành viên:</span>
+                        <span class="badge bg-info">{{ user_count }}</span>
                     </div>
                 </div>
             </div>
@@ -308,6 +295,12 @@
                         <div>
                             <h4 class="fw-bold text-success mb-1">{{ tests|length }}</h4>
                             <small class="text-muted">Bài kiểm tra</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="border-end">
+                            <h4 class="fw-bold text-warning mb-1">0</h4>
+                            <small class="text-muted">Câu hỏi</small>
                         </div>
                     </div>
                     <div class="col-6">
@@ -398,6 +391,10 @@ function shareForum() {
 
 .badge {
     font-size: 0.7em;
+}
+
+.flex-shrink-0 {
+    flex-shrink: 0;
 }
 </style>
 

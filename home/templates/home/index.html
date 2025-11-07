@@ -103,50 +103,7 @@
     <div class="col-lg-4">
       <div class="sticky-top" style="top: 20px;">
         <div class="d-grid gap-4">
-          
-          {% if is_authenticated and user_type == 'student' %}
-          <div class="card text-center shadow-sm">
-            <div class="card-body">
-              <h6 class="card-title text-muted">SỐ COIN HIỆN CÓ</h6>
-              <p class="card-text display-5 fw-bold text-primary" id="coinDisplay">
-                <i class="bi bi-coin"></i> {{ coins|default:"0" }}
-              </p>
-              <!-- url 'accounts:wallet' -->
-              <a href="#" class="btn btn-sm btn-outline-primary">Lịch sử giao dịch</a>
-            </div>
-          </div>
-
-          <div class="card text-center shadow-sm bg-success text-white">
-            <!-- url 'accounts:checkin' -->
-            <form action="#" method="POST" class="mb-0">
-              {% csrf_token %}
-              <div class="card-body">
-                <h5 class="card-title"><i class="bi bi-calendar-check me-2"></i>Điểm danh hằng ngày</h5>
-                <p class="small" id="checkInMessage">
-                  {% if can_checkin %}
-                  Nhận ngay 10 coin khi điểm danh hôm nay!
-                  {% else %}
-                  Bạn đã điểm danh hôm nay.
-                  {% endif %}
-                </p>
-                <button type="submit" class="btn btn-light fw-bold" {% if not can_checkin %}disabled{% endif %}>
-                  {% if can_checkin %}Điểm danh ngay{% else %}Đã điểm danh{% endif %}
-                </button>
-              </div>
-            </form>
-          </div>
-
-          <!-- <div class="card shadow-sm">
-            <div class="card-header">
-              <h6 class="mb-0"><i class="bi bi-bell me-2"></i>Thông báo mới</h6>
-            </div>
-            <ul class="list-group list-group-flush">
-              <li class="list-group-item small">Bạn vừa nhận được 50 coin vì đạt điểm cao.</li>
-              <li class="list-group-item small">Tài liệu "Giải tích 1" của bạn có bình luận mới.</li>
-            </ul>
-          </div> -->
-          {% endif %}
-
+        
           <!-- Quick Actions -->
           <div class="card shadow-sm border-0">
             <div class="card-header bg-primary text-white">

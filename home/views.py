@@ -34,7 +34,6 @@ def index(request):
             cursor.execute("""
                 SELECT 
                     u.avatar_path,
-                    s.coins, 
                     s.student_id, 
                     s.enrollment_year,
                     m.name as major_name
@@ -47,10 +46,9 @@ def index(request):
             row = cursor.fetchone()
             if row:
                 context['avatar_path'] = row[0]
-                context['coins'] = row[1] or 0
-                context['student_id'] = row[2]
-                context['enrollment_year'] = row[3]
-                context['major_name'] = row[4]
+                context['student_id'] = row[1]
+                context['enrollment_year'] = row[2]
+                context['major_name'] = row[3]
             
         elif context['user_type'] == 'teacher':
             # Query thông tin giảng viên nếu cần

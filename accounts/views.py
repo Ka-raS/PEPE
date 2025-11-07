@@ -22,221 +22,267 @@ def hash_password(password):
 def verify_password(password, hashed):
     return hash_password(password) == hashed
 
-
-def index(request):
+def index(request): 
+    # Kiểm tra session
     if not request.session.get('user_id'):
         messages.warning(request, 'Vui lòng đăng nhập để tiếp tục')
         return redirect('accounts:login')
-
+    
+    user_id = request.session.get('user_id')
     user_type = request.session.get('user_type')
-    
-    if user_type == 'student':
-        return redirect('accounts:index_student')
-    elif user_type == 'teacher':
-        return redirect('accounts:index_teacher')
-    
-    messages.error(request, 'Loại tài khoản không hợp lệ')
-    return redirect('accounts:logout')
 
-# context:
-#  profile,
-#  avatar_path (có thể None),
-#  full_name (first_name + first_name, None được),
-#  username,
-#  major (kéo từ database bằng major_id, None được)
-#  email
-#  all_majors (select name from bảng majors)
+    context = {
+        'is_authenticated': True,
+        'user_type': user_type,
+        'username': request.session.get('username', ''),
+        'email': request.session.get('email', ''),
+        'avatar_path': None,
+        'full_name': '',
+        'all_major': [],
+        'all_departments': [],
+        'all_subjects': [],
+        'current_subject_ids': set(),
+        'subjects_taught_names': [],
+        'recent_activities': [],  # THÊM: Danh sách hoạt động gần đây
+        'stats': {'uploads': 0, 'tests': 0}
+    }
 
-def index_student(request):
-    if not request.session.get('user_id'):
-        messages.warning(request, 'Vui lòng đăng nhập để tiếp tục')
-        return redirect('accounts:login')
-    
-    if request.session.get('user_type') != 'student':
-        messages.error(request, 'Chỉ sinh viên mới có quyền truy cập')
-        return redirect('home:index')
-    
-    user_id = request.session.get('user_id')
-    
-    # Xử lý POST - cập nhật thông tin
-    if request.method == 'POST':
-        full_name = request.POST.get('full_name')
-        major_id = request.POST.get('major_id')
-        
-        # Tách first_name và last_name
-        name_parts = full_name.split(' ', 1) if full_name else ['', '']
-        first_name = name_parts[0] if len(name_parts) > 0 else None
-        last_name = name_parts[1] if len(name_parts) > 1 else None
-        
-        with connection.cursor() as cursor:
-            # Cập nhật users
-            cursor.execute("""
-                UPDATE users 
-                SET first_name = %s, last_name = %s
-                WHERE id = %s
-            """, [first_name, last_name, user_id])
-            
-            # Cập nhật hoặc insert students
-            cursor.execute("""
-                SELECT id 
-                FROM students 
-                WHERE id = %s
-            """, [user_id])
-            if cursor.fetchone():
-                cursor.execute("""
-                    UPDATE students 
-                    SET major_id = %s
-                    WHERE id = %s
-                """, [major_id if major_id else None, user_id])
-            else:
-                cursor.execute("""
-                    INSERT INTO students (id, major_id) 
-                    VALUES (%s, %s)
-                """, [user_id, major_id if major_id else None])
-        
-        messages.success(request, 'Cập nhật thông tin thành công!')
-        return redirect('accounts:index_student')
-    
-    # GET - lấy dữ liệu hiển thị
-    context = {'is_authenticated': request.session.get('user_id') is not None}
-
-    with connection.cursor() as cursor:
-        cursor.execute("""
-            SELECT 
-                u.username, u.email, u.first_name, u.last_name, u.avatar_path,
-                COALESCE(s.coins, 0) AS coins,
-                s.major_id,
-                m.name AS major_name
-            FROM users u
-            LEFT JOIN students s ON u.id = s.id
-            LEFT JOIN majors m ON s.major_id = m.id
-            WHERE u.id = %s
-        """, [user_id])
-        data = cursor.fetchone()
-        
-        # Lấy danh sách majors
-        cursor.execute("SELECT * FROM majors ORDER BY name")
-        context['all_major'] = [{'id': row[0], 'name': row[1]} for row in cursor.fetchall()]
-
-    # Xử lý dữ liệu
-    context['username']         = data[0] 
-    context['email']            = data[1] 
-    context['first_name']       = data[2] or ''
-    context['last_name']        = data[3] or ''
-    context['full_name']        = f"{context['first_name']} {context['last_name']}".strip()
-    context['avatar_path']      = data[4]
-    context['coins']            = data[5]
-    context['current_major_id'] = data[6]
-    context['major_name']       = data[7]
-
-    context['tests_taken']      = 0
-    context['uploads_count']    = 0
-
-    # with connection.cursor() as cursor:
-    #     # Giả sử bạn có bảng 'forum_testsubmission'
-    #     sql_tests = "SELECT COUNT(id) FROM forum_testsubmission WHERE user_id = %s"
-    #     cursor.execute(sql_tests, [user_id])
-    #     tests_row = cursor.fetchone()
-    #     if tests_row:
-    #         tests_taken = tests_row[0]
-
-    return render(request, 'accounts/index_student.html', context)
-
-def index_teacher(request):
-    if not request.session.get('user_id'):
-        messages.warning(request, 'Vui lòng đăng nhập để tiếp tục')
-        return redirect('accounts:login')
-    
-    user_id = request.session.get('user_id')
-
-    # POST: cập nhật thông tin giáo viên
+    # --- XỬ LÝ POST (Cập nhật thông tin) ---
     if request.method == 'POST':
         full_name = request.POST.get('full_name','').strip()
-        title = request.POST.get('title', '').strip()
-        department_id = request.POST.get('department') or None
-
-        # Tách first_name và last_name
         name_parts = full_name.split(' ', 1) if full_name else ['', '']
         first_name = name_parts[0] if len(name_parts) > 0 else ''
         last_name = name_parts[1] if len(name_parts) > 1 else ''
 
         try:
             with connection.cursor() as cursor:
-                # Cập nhật profiles
+                # 1. Cập nhật bảng 'users' (chung cho cả 2)
                 cursor.execute("""
-                    UPDATE profiles
-                    SET first_name = %s, last_name = %s
+                    UPDATE users 
+                    SET first_name = %s, last_name = %s 
                     WHERE id = %s
                 """, [first_name, last_name, user_id])
 
-                # Kiểm tra và insert/update teachers
-                cursor.execute("SELECT id FROM teachers WHERE id = %s", [user_id])
-                if cursor.fetchone():
-                    cursor.execute("""
-                        UPDATE teachers
-                        SET title = %s, department_id = %s
-                        WHERE id = %s
-                    """, [title, department_id, user_id])
-                else:
-                    cursor.execute("""
-                        INSERT INTO teachers (id, title, department_id)
-                        VALUES (%s, %s, %s)
-                    """, [user_id, title, department_id])
+                # 2. Cập nhật bảng riêng (students hoặc teachers)
+                if user_type == 'student':
+                    major_id = request.POST.get('major_id') or None
+                    enrollment_year = request.POST.get('enrollment_year') or None
+                    
+                    cursor.execute("SELECT id FROM students WHERE id = %s", [user_id])
+                    if cursor.fetchone():
+                        cursor.execute("""
+                            UPDATE students SET major_id = %s, enrollment_year = %s WHERE id = %s
+                        """, [major_id, enrollment_year, user_id])
+                    else:
+                        cursor.execute("""
+                            INSERT INTO students (id, major_id, enrollment_year) VALUES (%s, %s, %s)
+                        """, [user_id, major_id, enrollment_year])
+                
+                elif user_type == 'teacher':
+                    title = request.POST.get('title', '').strip()
+                    department_id = request.POST.get('department') or None
+                    experience_years = request.POST.get('experience_years', 0)
+                    subjects_taught_ids = request.POST.getlist('subjects_taught')
+                    
+                    cursor.execute("SELECT id FROM teachers WHERE id = %s", [user_id])
+                    if cursor.fetchone():
+                        cursor.execute("""
+                            UPDATE teachers SET title = %s, department_id = %s, experience_years = %s WHERE id = %s
+                        """, [title, department_id, experience_years, user_id])
+                    else:
+                        cursor.execute("""
+                            INSERT INTO teachers (id, title, department_id, experience_years) VALUES (%s, %s, %s, %s)
+                        """, [user_id, title, department_id, experience_years])
+                    
+                    # Cập nhật bảng N-N teacher_subjects
+                    cursor.execute("DELETE FROM teacher_subjects WHERE teacher_id = %s", [user_id])
+                    if subjects_taught_ids:
+                        insert_data = [(user_id, subject_id) for subject_id in subjects_taught_ids if subject_id]
+                        cursor.executemany("""
+                            INSERT INTO teacher_subjects (teacher_id, subject_id) VALUES (%s, %s)
+                        """, insert_data)
 
-            messages.success(request, 'Cập nhật thông tin giáo viên thành công!')
-            return redirect('accounts:index_teacher')
+            messages.success(request, 'Cập nhật thông tin thành công!')
+            return redirect('accounts:index')
+
         except Exception as e:
             messages.error(request, f'Cập nhật thất bại: {e}')
+            print(f"Lỗi POST index (gộp): {e}")
 
-    # GET: lấy dữ liệu hiển thị
-    with connection.cursor() as cursor:
-        cursor.execute("""
-            SELECT 
-                p.username, p.email, p.first_name, p.last_name,
-                t.title, t.department_id, d.name AS department_name
-            FROM profiles p
-            LEFT JOIN teachers t ON p.id = t.id
-            LEFT JOIN departments d ON t.department_id = d.id
-            WHERE p.id = %s
-        """, [user_id])
-        data = cursor.fetchone()
+    # --- XỬ LÝ GET (Hiển thị thông tin) ---
+    try:
+        with connection.cursor() as cursor:
+            # Lấy thông tin chung
+            cursor.execute("SELECT username, email, first_name, last_name, avatar_path FROM users WHERE id = %s", [user_id])
+            user_base = cursor.fetchone()
+            if user_base:
+                context['username'] = user_base[0]
+                context['email'] = user_base[1]
+                context['first_name'] = user_base[2] or ''
+                context['last_name'] = user_base[3] or ''
+                context['full_name'] = f"{context['first_name']} {context['last_name']}".strip()
+                context['avatar_path'] = f"{user_base[4]}" if user_base[4] else None
 
-        # Lấy danh sách tất cả khoa
-        cursor.execute("SELECT id, name FROM departments ORDER BY name")
-        all_departments = [{'id': row[0], 'name': row[1]} for row in cursor.fetchall()]
+            if user_type == 'student':
+                # Lấy dữ liệu SINH VIÊN
+                cursor.execute("""
+                    SELECT s.major_id, m.name AS major_name, s.enrollment_year
+                    FROM students s
+                    LEFT JOIN majors m ON s.major_id = m.id
+                    WHERE s.id = %s
+                """, [user_id])
+                student_data = cursor.fetchone()
+                if student_data:
+                    context['current_major_id'] = student_data[0]
+                    context['major_name'] = student_data[1]
+                    context['year_of_study'] = student_data[2]
 
-    # Xử lý dữ liệu
-    username = data[0] if data else ''
-    email = data[1] if data else ''
-    first_name = data[2] if data else ''
-    last_name = data[3] if data else ''
-    full_name = f"{first_name} {last_name}".strip() if first_name or last_name else ''
-    title = data[4] if data else ''
-    current_department_id = data[5] if data else None
-    department_name = data[6] if data else ''
+                # Lấy danh sách majors
+                cursor.execute("SELECT id, name FROM majors ORDER BY name")
+                context['all_major'] = [{'id': row[0], 'name': row[1]} for row in cursor.fetchall()]
+                
+                # THÊM: Lấy thống kê thực tế cho sinh viên
+                # Số bài kiểm tra đã làm
+                cursor.execute("SELECT COUNT(*) FROM submissions WHERE author_id = %s", [user_id])
+                tests_taken = cursor.fetchone()[0] or 0
+                context['stats']['tests'] = tests_taken
+                
+                # Số tài liệu đã tải lên
+                cursor.execute("SELECT COUNT(*) FROM posts WHERE author_id = %s", [user_id])
+                uploads_count = cursor.fetchone()[0] or 0
+                context['stats']['uploads'] = uploads_count
 
-    # TODO
-    uploads_count = 0
-    coins = 0
-    tests_taken = 0
+                # THÊM: Lấy hoạt động gần đây thực tế
+                recent_activities = []
+                
+                # Lấy bài kiểm tra gần đây
+                cursor.execute("""
+                    SELECT t.title, s.submitted_at 
+                    FROM submissions s
+                    JOIN tests t ON s.test_id = t.id
+                    WHERE s.author_id = %s
+                    ORDER BY s.submitted_at DESC
+                    LIMIT 3
+                """, [user_id])
+                recent_tests = cursor.fetchall()
+                for test in recent_tests:
+                    recent_activities.append({
+                        'icon': 'bi-pencil-square text-success',
+                        'text': f'Hoàn thành bài kiểm tra "{test[0]}"',
+                        'time': test[1]
+                    })
+                
+                # Lấy tài liệu tải lên gần đây
+                cursor.execute("""
+                    SELECT title, created_at 
+                    FROM posts
+                    WHERE author_id = %s
+                    ORDER BY created_at DESC
+                    LIMIT 3
+                """, [user_id])
+                recent_posts = cursor.fetchall()
+                for post in recent_posts:
+                    recent_activities.append({
+                        'icon': 'bi-cloud-upload text-primary',
+                        'text': f'Tải lên tài liệu "{post[0]}"',
+                        'time': post[1]
+                    })
+                
+                # Sắp xếp theo thời gian mới nhất
+                recent_activities.sort(key=lambda x: x['time'], reverse=True)
+                context['recent_activities'] = recent_activities[:3]  # Lấy 3 hoạt động gần nhất
 
-    context = {
-        'is_authenticated': request.session.get('user_id') is not None,
-        'username': username,
-        'email': email,
-        'full_name': full_name,
-        'first_name': first_name,
-        'last_name': last_name,
-        'title': title,
-        'current_department_id': current_department_id,
-        'department_name': department_name,
-        'all_departments': all_departments,
-        'uploads_count': uploads_count,
-        'coins': coins,
-        'tests_taken': tests_taken,
-    }
+            elif user_type == 'teacher':
+                # Lấy dữ liệu GIẢNG VIÊN
+                cursor.execute("""
+                    SELECT t.title, t.department_id, d.name AS department_name, t.experience_years
+                    FROM teachers t
+                    LEFT JOIN departments d ON t.department_id = d.id
+                    WHERE t.id = %s
+                """, [user_id])
+                teacher_data = cursor.fetchone()
+                
+                if teacher_data:
+                    context['title'] = teacher_data[0]
+                    context['current_department_id'] = teacher_data[1]
+                    context['department_name'] = teacher_data[2]
+                    context['experience_years'] = teacher_data[3] or 0
+                
+                # Lấy danh sách departments
+                cursor.execute("SELECT id, name FROM departments ORDER BY name")
+                context['all_departments'] = [{'id': row[0], 'name': row[1]} for row in cursor.fetchall()]
+                
+                # Lấy tất cả subjects
+                cursor.execute("SELECT id, name FROM subjects ORDER BY name") 
+                context['all_subjects'] = [{'id': row[0], 'name': row[1]} for row in cursor.fetchall()]
+                
+                # Lấy subjects của teacher
+                cursor.execute("SELECT subject_id FROM teacher_subjects WHERE teacher_id = %s", [user_id])
+                current_subject_ids = {row[0] for row in cursor.fetchall()}
+                context['current_subject_ids'] = current_subject_ids
+                
+                # Tạo danh sách tên môn học
+                subjects_taught_names = []
+                for subject in context['all_subjects']:
+                    if subject['id'] in current_subject_ids:
+                        subjects_taught_names.append(subject['name'])
+                context['subjects_taught_names'] = subjects_taught_names
 
-    return render(request, 'accounts/index_teacher.html', context)
+                # THÊM: Lấy thống kê thực tế cho giảng viên
+                # Số bài kiểm tra đã tạo
+                cursor.execute("SELECT COUNT(*) FROM tests WHERE author_id = %s", [user_id])
+                tests_created = cursor.fetchone()[0] or 0
+                context['stats']['tests'] = tests_created
+                
+                # Số tài liệu đã tải lên
+                cursor.execute("SELECT COUNT(*) FROM posts WHERE author_id = %s", [user_id])
+                uploads_count = cursor.fetchone()[0] or 0
+                context['stats']['uploads'] = uploads_count
+
+                # THÊM: Lấy hoạt động gần đây thực tế
+                recent_activities = []
+                
+                # Lấy bài kiểm tra tạo gần đây
+                cursor.execute("""
+                    SELECT title, created_at 
+                    FROM tests
+                    WHERE author_id = %s
+                    ORDER BY created_at DESC
+                    LIMIT 3
+                """, [user_id])
+                recent_tests = cursor.fetchall()
+                for test in recent_tests:
+                    recent_activities.append({
+                        'icon': 'bi-plus-circle text-success',
+                        'text': f'Tạo bài kiểm tra "{test[0]}"',
+                        'time': test[1]
+                    })
+                
+                # Lấy tài liệu tải lên gần đây
+                cursor.execute("""
+                    SELECT title, created_at 
+                    FROM posts
+                    WHERE author_id = %s
+                    ORDER BY created_at DESC
+                    LIMIT 3
+                """, [user_id])
+                recent_posts = cursor.fetchall()
+                for post in recent_posts:
+                    recent_activities.append({
+                        'icon': 'bi-cloud-upload text-primary',
+                        'text': f'Tải lên tài liệu "{post[0]}"',
+                        'time': post[1]
+                    })
+                
+                # Sắp xếp theo thời gian mới nhất
+                recent_activities.sort(key=lambda x: x['time'], reverse=True)
+                context['recent_activities'] = recent_activities[:3]  # Lấy 3 hoạt động gần nhất
+            
+    except Exception as e:
+        messages.error(request, f"Lỗi khi tải dữ liệu trang: {e}")
+        print(f"Lỗi GET index (gộp): {e}")
+
+    return render(request, 'accounts/index.html', context)
 
 
 def register_view(request):
@@ -389,4 +435,4 @@ def update_avatar(request):
     except Exception as e:
         messages.error(request, f'Lỗi khi tải ảnh: {str(e)}')
     
-    return redirect('accounts:index_student')
+    return redirect('accounts:index')

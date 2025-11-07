@@ -12,6 +12,18 @@ class Migration(migrations.Migration):
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL
             );
+            INSERT INTO majors (name)
+            VALUES
+                ('Công nghệ Thông tin'),
+                ('Kỹ thuật Điện tử'),
+                ('Công nghệ Đa phương tiện'),
+                ('Kỹ thuật Điện tử Viễn thông'),
+                ('Truyền thông Đa phương tiện'),
+                ('Marketing'),
+                ('Thuơng mại Điện tử'),
+                ('Logistics và Quản lý Chuỗi cung ứng'),
+                ('Công nghệ Tài chính'),
+                ('Công nghệ Điện tử');
         """),
 
         migrations.RunSQL("""
@@ -19,6 +31,14 @@ class Migration(migrations.Migration):
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL
             );
+            INSERT INTO departments (name)
+            VALUES
+                ('Công nghệ Thông tin'),
+                ('Điện Điện tử'),
+                ('Đa phương tiện'),
+                ('Viễn thông'),
+                ('Quản trị Kinh doanh'),
+                ('Tài chính Kế toán');
         """),
 
         migrations.RunSQL("""
@@ -39,7 +59,6 @@ class Migration(migrations.Migration):
             CREATE TABLE students (
                 student_id TEXT UNIQUE,
                 enrollment_year INTEGER,
-                coins INTEGER DEFAULT 0,
                           
                 id INTEGER PRIMARY KEY,
                 major_id INTEGER,
