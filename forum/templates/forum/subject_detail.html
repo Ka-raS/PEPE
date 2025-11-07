@@ -70,7 +70,7 @@
                                 <i class="bi bi-person"></i> {{ post.author.username }}
                             </span>
                             <span class="badge bg-light text-dark me-2">
-                                <i class="bi bi-chat"></i> 5 bình luận
+                                <i class="bi bi-chat"></i> {{ post.comment_count }} bình luận
                             </span>
                             <span class="badge bg-light text-dark">
                                 <i class="bi bi-eye"></i> {{ post.view_count }} lượt xem
@@ -300,25 +300,19 @@
                 <div class="row text-center">
                     <div class="col-6 mb-3">
                         <div class="border-end">
-                            <h4 class="fw-bold text-primary mb-1">{{ posts.count }}</h4>
+                            <h4 class="fw-bold text-primary mb-1">{{ posts|length }}</h4>
                             <small class="text-muted">Bài viết</small>
                         </div>
                     </div>
                     <div class="col-6 mb-3">
                         <div>
-                            <h4 class="fw-bold text-success mb-1">{{ tests.count }}</h4>
+                            <h4 class="fw-bold text-success mb-1">{{ tests|length }}</h4>
                             <small class="text-muted">Bài kiểm tra</small>
                         </div>
                     </div>
                     <div class="col-6">
-                        <div class="border-end">
-                            <h4 class="fw-bold text-warning mb-1">{{ quizzes.count }}</h4>
-                            <small class="text-muted">Bài trắc nghiệm</small>
-                        </div>
-                    </div>
-                    <div class="col-6">
                         <div>
-                            <h4 class="fw-bold text-info mb-1">156</h4>
+                            <h4 class="fw-bold text-info mb-1">{{ user_count }}</h4>
                             <small class="text-muted">Thành viên</small>
                         </div>
                     </div>

@@ -11,6 +11,8 @@ urlpatterns = [
     path('logout/', views.logout_view, name='logout'),
 
     path('student/', views.index_student, name='index_student'),
+    path('update-avatar/', views.update_avatar, name='update_avatar'),
+    
     # path('teacher/', views.index_teacher, name='index_teacher'),
     # path('referral/',views.referral, name='referral'),
     # path('wallet/',views.wallet, name='wallet'),

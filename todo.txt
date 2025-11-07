@@ -1,7 +1,23 @@
-- Fix lại điểm danh
-- Chuyển wallet sang app riêng // thôi
-- Làm coin
+- Xóa database có sẵn của django
+
+* home
+- index.html không hiện coin nếu user_type là "teacher"
+- xóa bới thông tin thừa trong từ điển context ở index(request)
+
+* accounts
+- Index teacher
+- Đăng ký chọn student/teacher
+
+* forum
+- Thêm tables rawsql của forum
+
+
+
+* ưu tiên thấp
+- Teacher năm kinh nghiệm
+
 - Gợi ý tài liệu ở Home
-- Thông báo ở Home
 - Thêm search
-- thêm darkmode <html lang="vi" data-bs-theme="dark">
+- Chuyển wallet sang app riêng
+- Làm coin
+- Thông báo ở Home // nó là messages

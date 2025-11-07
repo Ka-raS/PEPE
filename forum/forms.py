@@ -1,6 +1,7 @@
 import os
 
 from django import forms
+from django.conf import settings
 from django.forms import inlineformset_factory
 from .models import Post, Subject, Test, Quiz, Question, Option
 
@@ -38,9 +39,8 @@ class PostForm(forms.ModelForm):
     def clean_attachment(self):
         attachment = self.cleaned_data.get('attachment')
         if attachment:
-            # Giới hạn kích thước file (10MB)
-            if attachment.size > 10 * 1024 * 1024:
-                raise forms.ValidationError("File không được lớn hơn 10MB")
+            if attachment.size > settings.FILE_UPLOAD_MAX_MEMORY_SIZE:
+                raise forms.ValidationError(f"File không được lớn hơn {settings.FILE_UPLOAD_MAX_MEMORY_SIZE / (1024 ** 2)}MB.")
             
             # Kiểm tra phần mở rộng
             allowed_extensions = ['.pdf', '.doc', '.docx', '.txt', '.zip', '.rar']

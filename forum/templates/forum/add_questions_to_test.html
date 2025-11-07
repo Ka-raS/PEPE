@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Thêm Câu Hỏi Vào Bài Kiểm Tra{% endblock %}
+
+{% block main %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h4 class="card-title mb-0">
+                        <i class="bi bi-plus-circle"></i> Thêm Câu Hỏi Vào Bài Kiểm Tra
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        {% if available_questions %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th width="50px">
+                                            <input type="checkbox" id="select-all">
+                                        </th>
+                                        <th>Câu hỏi</th>
+                                        <th width="120px">Loại</th>
+                                        <th width="100px">Hành động</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for question in available_questions %}
+                                    <tr>
+                                        <td>
+                                            <input type="checkbox" name="question_ids" value="{{ question.id }}" 
+                                                   class="question-checkbox">
+                                        </td>
+                                        <td>
+                                            <div class="question-content">
+                                                {{ question.content|truncatewords:15 }}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge {% if question.type == 'multiple_choice' %}bg-info{% else %}bg-warning{% endif %}">
+                                                {{ question.type }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <button type="button" class="btn btn-sm btn-outline-primary" 
+                                                    data-bs-toggle="modal" data-bs-target="#previewModal{{ question.id }}">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+
+                                    <!-- Preview Modal -->
+                                    <div class="modal fade" id="previewModal{{ question.id }}" tabindex="-1">
+                                        <div class="modal-dialog modal-lg">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">Xem Trước Câu Hỏi</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <p><strong>Nội dung:</strong> {{ question.content }}</p>
+                                                    <p><strong>Loại:</strong> {{ question.type }}</p>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="mt-3">
+                            <strong>Đã chọn: </strong>
+                            <span id="selected-count">0</span> câu hỏi
+                        </div>
+
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'forum:test_detail' test_id %}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Quay lại
+                            </a>
+                            <button type="submit" class="btn btn-success" id="submit-btn" disabled>
+                                <i class="bi bi-check-circle"></i> Thêm Câu Hỏi Đã Chọn
+                            </button>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-4">
+                            <i class="bi bi-question-circle display-1 text-muted"></i>
+                            <h4 class="text-muted mt-3">Không có câu hỏi nào để thêm</h4>
+                            <p class="text-muted">Tất cả câu hỏi đã được thêm vào bài kiểm tra này</p>
+                            <a href="{% url 'forum:create_question' test_id %}" class="btn btn-primary me-2">
+                                <i class="bi bi-plus-circle"></i> Tạo Câu Hỏi Mới
+                            </a>
+                            <a href="{% url 'forum:test_detail' test_id %}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Quay lại
+                            </a>
+                        </div>
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAll = document.getElementById('select-all');
+    const checkboxes = document.querySelectorAll('.question-checkbox');
+    const selectedCount = document.getElementById('selected-count');
+    const submitBtn = document.getElementById('submit-btn');
+
+    function updateSelection() {
+        const selected = document.querySelectorAll('.question-checkbox:checked').length;
+        selectedCount.textContent = selected;
+        submitBtn.disabled = selected === 0;
+    }
+
+    selectAll.addEventListener('change', function() {
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = this.checked;
+        });
+        updateSelection();
+    });
+
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateSelection);
+    });
+
+    updateSelection(); // Initialize
+});
+</script>
+{% endblock %}

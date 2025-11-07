@@ -30,8 +30,7 @@ A web forum
     $ pip install -r requirements.txt
     ```
 
-3. Create `example.sqlite3` and Run Server:
+3. Run Server:
     ```bash
-    $ python manage.py migrate
     $ python manage.py runserver
     ```

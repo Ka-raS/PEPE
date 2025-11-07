@@ -22,7 +22,7 @@ class Migration(migrations.Migration):
         """),
 
         migrations.RunSQL("""
-            CREATE TABLE profiles (
+            CREATE TABLE users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT UNIQUE NOT NULL,
                 password TEXT NOT NULL,
@@ -43,7 +43,7 @@ class Migration(migrations.Migration):
                           
                 id INTEGER PRIMARY KEY,
                 major_id INTEGER,
-                FOREIGN KEY (id) REFERENCES profiles(id) ON DELETE CASCADE,
+                FOREIGN KEY (id) REFERENCES users(id) ON DELETE CASCADE,
                 FOREIGN KEY (major_id) REFERENCES majors(id)
             );
         """),
@@ -54,7 +54,7 @@ class Migration(migrations.Migration):
                 teacher_id TEXT UNIQUE,
                 title TEXT,
                 department_id INTEGER,
-                FOREIGN KEY (id) REFERENCES profiles(id) ON DELETE CASCADE,
+                FOREIGN KEY (id) REFERENCES users(id) ON DELETE CASCADE,
                 FOREIGN KEY (department_id) REFERENCES departments(id)
             );
         """),

@@ -1,200 +1,144 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Làm bài kiểm tra: {{ test.title }}{% endblock %}
+{% block title %}Làm Bài Kiểm Tra{% endblock %}
 
 {% block main %}
-<div class="container">
-    <nav aria-label="breadcrumb" class="mb-4">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item">
-                <a href="{% url 'forum:index' %}" class="text-decoration-none">
-                    <i class="bi bi-house"></i> Diễn đàn
-                </a>
-            </li>
-            <li class="breadcrumb-item">
-                <a href="{% url 'forum:subject_detail' test.subject.id %}" class="text-decoration-none">
-                    {{ test.subject.name }}
-                </a>
-            </li>
-            <li class="breadcrumb-item active">Làm bài kiểm tra</li>
-        </ol>
-    </nav>
-
+<div class="container mt-4">
     <div class="row">
         <div class="col-lg-8">
             <div class="card shadow-sm">
                 <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
                     <h4 class="card-title mb-0">
-                        <i class="bi bi-file-earmark-text"></i> {{ test.title }}
+                        <i class="bi bi-file-earmark-text"></i> Làm Bài Kiểm Tra
                     </h4>
-                    <div id="timer" class="h4 mb-0">
-                        {% if test.time_limit %}
-                        {{ test.time_limit }}:00
-                        {% else %}
+                    <div id="timer" class="h4 mb-0 text-warning">
                         60:00
-                        {% endif %}
                     </div>
                 </div>
                 
                 <div class="card-body">
-                    <!-- Thông tin bài kiểm tra -->
-                    <div class="alert alert-info">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <strong><i class="bi bi-clock"></i> Thời gian làm bài:</strong> 
-                                {{ test.time_limit|default:"60" }} phút
-                            </div>
-                            <div class="col-md-6">
-                                <strong><i class="bi bi-calendar"></i> Hạn nộp bài:</strong> 
-                                {{ test.due_date|date:"d/m/Y H:i"|default:"Không có hạn" }}
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Mô tả bài kiểm tra -->
-                    {% if test.description %}
-                    <div class="mb-4">
-                        <h5>Mô tả:</h5>
-                        <p class="lead">{{ test.description }}</p>
-                    </div>
-                    {% endif %}
-
-                    <!-- File bài kiểm tra -->
-                    <div class="mb-4">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5>File bài kiểm tra:</h5>
-                            <a href="{{ test.file.url }}" class="btn btn-outline-primary btn-sm" download>
-                                <i class="bi bi-download"></i> Tải về
-                            </a>
-                        </div>
+                    <form method="post" id="test-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="time_spent" id="time-spent" value="0">
                         
-                        <div class="card">
-                            <div class="card-body">
-                                <div class="d-flex align-items-center">
-                                    <div class="flex-shrink-0">
-                                        {% if test.file.name|lower|slice:'-4:' == '.pdf' %}
-                                        <i class="bi bi-file-earmark-pdf text-danger fs-1"></i>
-                                        {% elif test.file.name|lower|slice:'-4:' == '.doc' or test.file.name|lower|slice:'-5:' == '.docx' %}
-                                        <i class="bi bi-file-earmark-word text-primary fs-1"></i>
-                                        {% elif test.file.name|lower|slice:'-4:' == '.txt' %}
-                                        <i class="bi bi-file-earmark-text text-secondary fs-1"></i>
-                                        {% else %}
-                                        <i class="bi bi-file-earmark fs-1 text-muted"></i>
-                                        {% endif %}
-                                    </div>
-                                    <div class="flex-grow-1 ms-3">
-                                        <h6 class="mb-1">{{ test.file.name|slice:"6:" }}</h6>
-                                        <small class="text-muted">{{ test.file.size|filesizeformat }}</small>
-                                    </div>
-                                    <div>
-                                        <a href="{{ test.file.url }}" target="_blank" class="btn btn-outline-success btn-sm">
-                                            <i class="bi bi-eye"></i> Xem file
-                                        </a>
-                                    </div>
-                                </div>
+                        {% for question in questions %}
+                        <div class="question-card mb-4 p-3 border rounded">
+                            <div class="question-header d-flex justify-content-between align-items-start mb-3">
+                                <h5 class="question-number mb-0">Câu {{ forloop.counter }}</h5>
+                                <span class="badge {% if question.type == 'multiple_choice' %}bg-info{% else %}bg-warning{% endif %}">
+                                    {{ question.type }}
+                                </span>
                             </div>
-                        </div>
-                    </div>
+                            
+                            <div class="question-content mb-3">
+                                <p class="lead">{{ question.content }}</p>
+                            </div>
 
-                    <!-- Form nộp bài (nếu cần) -->
-                    <div class="card mt-4">
-                        <div class="card-header bg-light">
-                            <h5 class="mb-0">
-                                <i class="bi bi-upload"></i> Nộp bài làm
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            <form method="post" enctype="multipart/form-data" id="submit-form">
-                                {% csrf_token %}
-                                <div class="mb-3">
-                                    <label for="answer_file" class="form-label fw-semibold">Upload bài làm của bạn</label>
-                                    <input type="file" class="form-control" id="answer_file" name="answer_file" 
-                                           accept=".pdf,.doc,.docx,.txt,.zip,.rar" required>
-                                    <div class="form-text">Định dạng: PDF, DOC, DOCX, TXT, ZIP, RAR (tối đa 10MB)</div>
+                            {% if question.type == 'multiple_choice' %}
+                                <div class="options-list">
+                                    {% for key, value in question.options.items %}
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="{% if question.allow_multiple %}checkbox{% else %}radio{% endif %}" 
+                                               name="answer_{{ question.id }}" id="option_{{ question.id }}_{{ key }}" 
+                                               value="{{ key }}">
+                                        <label class="form-check-label" for="option_{{ question.id }}_{{ key }}">
+                                            <strong>{{ key }}.</strong> {{ value }}
+                                        </label>
+                                    </div>
+                                    {% endfor %}
                                 </div>
-                                
-                                <div class="mb-3">
-                                    <label for="notes" class="form-label fw-semibold">Ghi chú (tùy chọn)</label>
-                                    <textarea class="form-control" id="notes" name="notes" rows="3" 
-                                              placeholder="Thêm ghi chú cho bài làm của bạn..."></textarea>
+                            {% else %}
+                                <div class="essay-answer">
+                                    <textarea class="form-control" name="answer_{{ question.id }}" 
+                                              rows="6" placeholder="Nhập câu trả lời của bạn..."></textarea>
+                                    {% if question.word_limit > 0 %}
+                                    <div class="form-text text-end">
+                                        Giới hạn: {{ question.word_limit }} từ
+                                    </div>
+                                    {% endif %}
                                 </div>
+                            {% endif %}
 
-                                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                                    <button type="button" class="btn btn-outline-secondary" onclick="pauseTest()">
-                                        <i class="bi bi-pause"></i> Tạm dừng
-                                    </button>
-                                    <button type="submit" class="btn btn-success" id="submit-btn">
-                                        <i class="bi bi-send-check"></i> Nộp bài
-                                    </button>
-                                </div>
-                            </form>
+                            {% if question.explanation %}
+                            <div class="explanation mt-3 p-2 bg-light rounded">
+                                <small class="text-muted">
+                                    <strong>Gợi ý:</strong> {{ question.explanation }}
+                                </small>
+                            </div>
+                            {% endif %}
                         </div>
-                    </div>
+                        {% empty %}
+                        <div class="text-center py-5">
+                            <i class="bi bi-question-circle display-1 text-muted"></i>
+                            <p class="text-muted mt-3">Bài kiểm tra chưa có câu hỏi nào</p>
+                        </div>
+                        {% endfor %}
+
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="submit" class="btn btn-success btn-lg" id="submit-btn">
+                                <i class="bi bi-send-check"></i> Nộp Bài
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
 
         <!-- Sidebar -->
         <div class="col-lg-4">
-            <div class="card shadow-sm">
+            <div class="card shadow-sm sticky-top" style="top: 20px;">
                 <div class="card-header bg-primary text-white">
                     <h5 class="card-title mb-0">
-                        <i class="bi bi-info-circle"></i> Thông tin bài kiểm tra
+                        <i class="bi bi-info-circle"></i> Thông Tin Bài Kiểm Tra
                     </h5>
                 </div>
                 <div class="card-body">
-                    <ul class="list-unstyled small">
-                        <li class="mb-2">
-                            <i class="bi bi-book me-2"></i>
-                            <strong>Môn học:</strong> {{ test.subject.name }}
-                        </li>
-                        <li class="mb-2">
-                            <i class="bi bi-clock me-2"></i>
-                            <strong>Thời gian:</strong> {{ test.time_limit|default:"60" }} phút
-                        </li>
-                        <li class="mb-2">
-                            <i class="bi bi-calendar me-2"></i>
-                            <strong>Hạn nộp:</strong> {{ test.due_date|date:"d/m/Y H:i"|default:"Không có hạn" }}
-                        </li>
-                        <li class="mb-2">
-                            <i class="bi bi-file-text me-2"></i>
-                            <strong>Định dạng:</strong> {{ test.file.name|slice:"-4:"|upper }}
-                        </li>
-                        <li class="mb-2">
-                            <i class="bi bi-person me-2"></i>
-                            <strong>Người đăng:</strong> Admin
-                        </li>
-                    </ul>
+                    <div class="mb-3">
+                        <strong>Lần làm thứ:</strong> {{ attempt_number }}
+                    </div>
                     
+                    <div class="mb-3">
+                        <strong>Số câu hỏi:</strong> {{ questions|length }}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Thời gian còn lại:</strong>
+                        <div id="time-display" class="fw-bold text-success"></div>
+                    </div>
+
                     <hr>
                     
-                    <h6>Hướng dẫn:</h6>
-                    <ul class="small">
-                        <li>Tải file bài kiểm tra về và làm bài</li>
-                        <li>Upload bài làm trước khi hết giờ</li>
-                        <li>Chỉ nộp bài một lần duy nhất</li>
-                        <li>Kiểm tra kỹ file trước khi nộp</li>
-                    </ul>
+                    <h6>Tiến độ:</h6>
+                    <div class="progress mb-3" style="height: 20px;">
+                        <div class="progress-bar" id="progress-bar" role="progressbar" style="width: 0%">
+                            <span id="progress-text">0%</span>
+                        </div>
+                    </div>
+
+                    <div class="answered-questions">
+                        <small class="text-muted">
+                            Đã trả lời: <span id="answered-count">0</span>/{{ questions|length }}
+                        </small>
+                    </div>
                 </div>
             </div>
 
-            <!-- Progress Timer -->
+            <!-- Navigation -->
             <div class="card shadow-sm mt-4">
                 <div class="card-header bg-warning text-dark">
                     <h5 class="card-title mb-0">
-                        <i class="bi bi-clock-history"></i> Tiến trình thời gian
+                        <i class="bi bi-list"></i> Danh Sách Câu Hỏi
                     </h5>
                 </div>
                 <div class="card-body">
-                    <div class="progress mb-3" style="height: 20px;">
-                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
-                             role="progressbar" id="progress-bar" style="width: 100%">
-                            100%
-                        </div>
-                    </div>
-                    <div class="text-center">
-                        <small class="text-muted" id="time-remaining">Thời gian còn lại: {{ test.time_limit|default:"60" }}:00</small>
+                    <div class="question-nav">
+                        {% for question in questions %}
+                        <button type="button" class="btn btn-sm btn-outline-secondary question-nav-btn mb-1" 
+                                data-question="{{ forloop.counter0 }}">
+                            {{ forloop.counter }}
+                        </button>
+                        {% endfor %}
                     </div>
                 </div>
             </div>
@@ -202,119 +146,134 @@
     </div>
 </div>
 
-<!-- JavaScript Timer -->
 <script>
-// Timer countdown
-let totalTime = {{ test.time_limit|default:60 }} * 60; // convert to seconds
-let timeLeft = totalTime;
-let isPaused = false;
-
-function updateTimer() {
-    if (isPaused) return;
-    
-    const minutes = Math.floor(timeLeft / 60);
-    const seconds = timeLeft % 60;
-    const progressPercent = (timeLeft / totalTime) * 100;
-    
-    // Update timer display
-    document.getElementById('timer').textContent = 
-        `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    
-    // Update progress bar
+document.addEventListener('DOMContentLoaded', function() {
+    let timeLeft = 60 * 60; // 60 minutes in seconds
+    let timeSpent = 0;
+    const timerElement = document.getElementById('timer');
+    const timeDisplay = document.getElementById('time-display');
+    const timeSpentInput = document.getElementById('time-spent');
     const progressBar = document.getElementById('progress-bar');
-    progressBar.style.width = `${progressPercent}%`;
-    progressBar.textContent = `${Math.round(progressPercent)}%`;
-    
-    // Update time remaining text
-    document.getElementById('time-remaining').textContent = 
-        `Thời gian còn lại: ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    
-    // Change color based on time remaining
-    if (progressPercent <= 25) {
-        progressBar.classList.remove('bg-warning');
-        progressBar.classList.add('bg-danger');
-    } else if (progressPercent <= 50) {
-        progressBar.classList.remove('bg-success', 'bg-danger');
-        progressBar.classList.add('bg-warning');
-    }
-    
-    if (timeLeft <= 0) {
-        // Auto-submit when time's up
-        document.getElementById('submit-form').submit();
-    } else {
-        timeLeft--;
-    }
-}
+    const progressText = document.getElementById('progress-text');
+    const answeredCount = document.getElementById('answered-count');
+    const submitBtn = document.getElementById('submit-btn');
 
-function pauseTest() {
-    isPaused = !isPaused;
-    const pauseBtn = document.querySelector('button[onclick="pauseTest()"]');
-    
-    if (isPaused) {
-        pauseBtn.innerHTML = '<i class="bi bi-play"></i> Tiếp tục';
-        pauseBtn.classList.remove('btn-outline-secondary');
-        pauseBtn.classList.add('btn-outline-success');
-    } else {
-        pauseBtn.innerHTML = '<i class="bi bi-pause"></i> Tạm dừng';
-        pauseBtn.classList.remove('btn-outline-success');
-        pauseBtn.classList.add('btn-outline-secondary');
+    // Timer function
+    function updateTimer() {
+        timeSpent++;
+        timeSpentInput.value = timeSpent;
+        
+        const minutes = Math.floor(timeLeft / 60);
+        const seconds = timeLeft % 60;
+        
+        timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        timeDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        
+        // Update progress bar
+        const progressPercent = ((60 * 60 - timeLeft) / (60 * 60)) * 100;
+        progressBar.style.width = `${progressPercent}%`;
+        progressText.textContent = `${Math.round(progressPercent)}%`;
+        
+        // Change color based on time
+        if (progressPercent > 75) {
+            progressBar.className = 'progress-bar bg-danger';
+        } else if (progressPercent > 50) {
+            progressBar.className = 'progress-bar bg-warning';
+        } else {
+            progressBar.className = 'progress-bar bg-success';
+        }
+        
+        if (timeLeft <= 0) {
+            // Auto-submit when time's up
+            document.getElementById('test-form').submit();
+        } else {
+            timeLeft--;
+        }
     }
-}
 
-// Start timer
-setInterval(updateTimer, 1000);
-updateTimer(); // Initial call
-
-// Prevent accidental page reload
-window.addEventListener('beforeunload', function (e) {
-    if (timeLeft > 0 && !isPaused) {
-        e.preventDefault();
-        e.returnValue = 'Bài kiểm tra của bạn vẫn đang được tính giờ. Bạn có chắc chắn muốn rời đi?';
+    // Update answered count
+    function updateAnsweredCount() {
+        const inputs = document.querySelectorAll('input[type="radio"]:checked, input[type="checkbox"]:checked, textarea');
+        let count = 0;
+        
+        inputs.forEach(input => {
+            if (input.type === 'textarea') {
+                if (input.value.trim() !== '') count++;
+            } else {
+                count++;
+            }
+        });
+        
+        answeredCount.textContent = count;
     }
-});
 
-// File upload validation
-document.getElementById('submit-form').addEventListener('submit', function(e) {
-    const fileInput = document.getElementById('answer_file');
-    const maxSize = 10 * 1024 * 1024; // 10MB
-    
-    if (fileInput.files.length > 0 && fileInput.files[0].size > maxSize) {
-        e.preventDefault();
-        alert('File không được lớn hơn 10MB!');
-        return false;
-    }
-    
-    // Disable submit button to prevent double submission
-    document.getElementById('submit-btn').disabled = true;
-    document.getElementById('submit-btn').innerHTML = '<i class="bi bi-hourglass-split"></i> Đang nộp...';
+    // Initialize
+    setInterval(updateTimer, 1000);
+    updateTimer();
+
+    // Add event listeners for answer changes
+    document.querySelectorAll('input, textarea').forEach(element => {
+        element.addEventListener('change', updateAnsweredCount);
+        element.addEventListener('input', updateAnsweredCount);
+    });
+
+    updateAnsweredCount();
+
+    // Navigation
+    document.querySelectorAll('.question-nav-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const questionIndex = this.getAttribute('data-question');
+            const questionElements = document.querySelectorAll('.question-card');
+            if (questionElements[questionIndex]) {
+                questionElements[questionIndex].scrollIntoView({ behavior: 'smooth' });
+            }
+        });
+    });
+
+    // Prevent accidental navigation
+    window.addEventListener('beforeunload', function(e) {
+        if (timeLeft > 0) {
+            e.preventDefault();
+            e.returnValue = 'Bài kiểm tra của bạn vẫn đang được tính giờ. Bạn có chắc chắn muốn rời đi?';
+        }
+    });
+
+    // Form submission
+    document.getElementById('test-form').addEventListener('submit', function(e) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Đang nộp...';
+    });
 });
 </script>
 
 <style>
+.question-card {
+    background: #f8f9fa;
+    border-left: 4px solid #0d6efd !important;
+}
+
+.question-nav {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 5px;
+}
+
+.question-nav-btn {
+    width: 100%;
+}
+
+.sticky-top {
+    position: -webkit-sticky;
+    position: sticky;
+}
+
+.progress {
+    border-radius: 10px;
+}
+
 .progress-bar {
-    transition: width 1s linear;
-}
-
-.card {
-    transition: transform 0.2s ease-in-out;
-}
-
-.card:hover {
-    transform: translateY(-2px);
-}
-
-#timer {
-    font-family: 'Courier New', monospace;
-    font-weight: bold;
-}
-
-.btn {
-    border-radius: 0.5rem;
-    transition: all 0.2s ease-in-out;
-}
-
-.btn:hover {
-    transform: translateY(-1px);
+    border-radius: 10px;
+    transition: width 1s ease-in-out;
 }
 </style>
 {% endblock %}

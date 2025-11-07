@@ -5,13 +5,13 @@
 {% block main %}
   <h1 class="mb-4">Diễn đàn môn học</h1>
   <div class="row">
-    {% for subject in subjects %}
+    {% for id, name, description in subjects %}
       <div class="col-md-6 mb-3">
         <div class="card">
           <div class="card-body">
-            <h5 class="card-title">{{ subject.name }}</h5>
-            <p class="card-text">{{ subject.description }}</p>
-            <a href="{% url 'forum:subject_detail' subject.id %}" class="btn btn-primary">Truy cập diễn đàn</a>
+            <h5 class="card-title">{{ name }}</h5>
+            <p class="card-text">{{ description }}</p>
+            <a href="{% url 'forum:subject_detail' id %}" class="btn btn-primary">Truy cập diễn đàn</a>
           </div>
         </div>
       </div>

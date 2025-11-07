@@ -30,7 +30,8 @@
                     <!-- Post Header -->
                     <div class="d-flex justify-content-between align-items-start mb-4">
                         <h1 class="h2 fw-bold text-primary mb-0">{{ post.title }}</h1>
-                        {% if post.author == request.user %}
+
+                        {% if post.author.id == current_user_id %}
                         <div class="btn-group">
                             <a href="{% url 'forum:edit_post' post.id %}" class="btn btn-outline-primary btn-sm">
                                 <i class="bi bi-pencil"></i> Sửa
@@ -45,17 +46,26 @@
 
                     <!-- Author Info -->
                     <div class="d-flex align-items-center mb-4 p-3 bg-light rounded-3">
+
                         <div class="flex-shrink-0">
-                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" 
-                                 style="width: 50px; height: 50px;">
-                                <i class="bi bi-person-fill fs-5"></i>
-                            </div>
+                            {% if post.author.avatar_path %}
+                                <img src="{{ post.author.avatar_path }}" 
+                                     class="rounded-circle" 
+                                     style="width: 50px; height: 50px; object-fit: cover;"
+                                     alt="{{ post.author.username }}">
+                            {% else %}
+                                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" 
+                                     style="width: 50px; height: 50px;">
+                                    <i class="bi bi-person-fill fs-5"></i>
+                                </div>
+                            {% endif %}
                         </div>
+
                         <div class="flex-grow-1 ms-3">
                             <h6 class="mb-1 fw-bold text-dark">{{ post.author.username }}</h6>
                             <small class="text-muted">
                                 <i class="bi bi-clock"></i> {{ post.created_at|date:"d/m/Y H:i" }}
-                                {% if post.updated_at != post.created_at %}
+                                {% if post.updated_at %}
                                 • <i class="bi bi-pencil"></i> Cập nhật: {{ post.updated_at|date:"d/m/Y H:i" }}
                                 {% endif %}
                             </small>
@@ -114,10 +124,42 @@
                     </div>
                     {% endif %}
 
-                    <!-- Tags -->
+                    <!-- Vote and Tags Section -->
                     <div class="d-flex justify-content-between align-items-center border-top pt-3">
-                        <div>
-                            <span class="badge bg-primary rounded-pill me-2">
+                        <!-- Vote Buttons (Left side) -->
+                        <div class="d-flex align-items-center">
+                            {% if is_authenticated %}
+                            <form method="post" action="{% url 'forum:vote_post' post.id %}" class="d-inline me-2">
+                                {% csrf_token %}
+                                <input type="hidden" name="vote_value" value="1">
+                                <button type="submit" class="btn btn-sm {% if user_vote == 1 %}btn-success{% else %}btn-outline-success{% endif %}" 
+                                        title="Upvote">
+                                    <i class="bi bi-arrow-up-circle{% if user_vote == 1 %}-fill{% endif %}"></i>
+                                </button>
+                            </form>
+                            <span class="fw-bold mx-2 {% if post.vote_value > 0 %}text-success{% elif post.vote_value < 0 %}text-danger{% else %}text-muted{% endif %}">
+                                {{ post.vote_value }}
+                            </span>
+                            <form method="post" action="{% url 'forum:vote_post' post.id %}" class="d-inline ms-2">
+                                {% csrf_token %}
+                                <input type="hidden" name="vote_value" value="-1">
+                                <button type="submit" class="btn btn-sm {% if user_vote == -1 %}btn-danger{% else %}btn-outline-danger{% endif %}" 
+                                        title="Downvote">
+                                    <i class="bi bi-arrow-down-circle{% if user_vote == -1 %}-fill{% endif %}"></i>
+                                </button>
+                            </form>
+                            {% else %}
+                            <a href="{% url 'accounts:login' %}" class="btn btn-sm btn-outline-secondary me-2" title="Đăng nhập để vote">
+                                <i class="bi bi-arrow-up-circle"></i>
+                            </a>
+                            <span class="fw-bold mx-2 text-muted">{{ post.vote_value }}</span>
+                            <a href="{% url 'accounts:login' %}" class="btn btn-sm btn-outline-secondary ms-2" title="Đăng nhập để vote">
+                                <i class="bi bi-arrow-down-circle"></i>
+                            </a>
+                            {% endif %}
+
+                            <!-- Tags -->
+                            <span class="badge bg-primary rounded-pill ms-3 me-2">
                                 <i class="bi bi-book"></i> {{ post.subject.name }}
                             </span>
                             {% if post.attachment %}
@@ -126,10 +168,91 @@
                             </span>
                             {% endif %}
                         </div>
+
+                        <!-- Post Date -->
                         <div class="text-muted small">
                             <i class="bi bi-calendar"></i> Đăng ngày {{ post.created_at|date:"d/m/Y" }}
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- Comments Section -->
+            <div class="card shadow-sm mb-4 border-0">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="bi bi-chat-dots"></i> Bình luận ({{ comments|length }})
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Comment Form -->
+                    {% if is_authenticated %}
+                    <div class="mb-4">
+                        <form method="post" action="{% url 'forum:add_comment' post.id %}">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <textarea name="content" class="form-control" rows="3" 
+                                          placeholder="Viết bình luận của bạn..." required></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-send"></i> Gửi bình luận
+                            </button>
+                        </form>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> 
+                        <a href="{% url 'accounts:login' %}">Đăng nhập</a> để bình luận
+                    </div>
+                    {% endif %}
+
+                    <hr>
+
+                    <!-- Comments List -->
+                    {% if comments %}
+                        {% for comment in comments %}
+                        <div class="comment-item border-bottom pb-3 mb-3">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0">
+                                    {% if comment.commenter.avatar_path %}
+                                        <img src="{{ comment.commenter.avatar_path }}" 
+                                             class="rounded-circle" 
+                                             style="width: 40px; height: 40px; object-fit: cover;"
+                                             alt="{{ comment.commenter.username }}">
+                                    {% else %}
+                                        <div class="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center" 
+                                             style="width: 40px; height: 40px;">
+                                            <i class="bi bi-person-fill"></i>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h6 class="mb-1 fw-bold">{{ comment.commenter.get_full_name }}</h6>
+                                            <small class="text-muted">
+                                                <i class="bi bi-clock"></i> {{ comment.created_at|date:"d/m/Y H:i" }}
+                                            </small>
+                                        </div>
+                                        {% if current_user_id == comment.commenter.id %}
+                                        <a href="{% url 'forum:delete_comment' comment.id %}" 
+                                           class="btn btn-outline-danger btn-sm"
+                                           onclick="return confirm('Bạn có chắc chắn muốn xóa bình luận này?')">
+                                            <i class="bi bi-trash"></i>
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                    <p class="mt-2 mb-0">{{ comment.content|linebreaks }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                    <div class="text-center py-4 text-muted">
+                        <i class="bi bi-chat-square-text fs-1"></i>
+                        <p class="mt-2">Chưa có bình luận nào</p>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
 
@@ -166,6 +289,7 @@
 
         <!-- Sidebar -->
         <div class="col-lg-4">
+
             <!-- Author Info -->
             <div class="card shadow-sm mb-4 border-0">
                 <div class="card-header bg-info text-white">
@@ -174,16 +298,58 @@
                     </h5>
                 </div>
                 <div class="card-body text-center">
-                    <div class="bg-info text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
-                         style="width: 80px; height: 80px;">
-                        <i class="bi bi-person-fill fs-2"></i>
-                    </div>
+                    {% if post.author.avatar_path %}
+                        <img src="{{ post.author.avatar_path }}" 
+                             class="rounded-circle mb-3" 
+                             style="width: 80px; height: 80px; object-fit: cover; border: 3px solid #0dcaf0;"
+                             alt="{{ post.author.username }}">
+                    {% else %}
+                        <div class="bg-info text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                             style="width: 80px; height: 80px;">
+                            <i class="bi bi-person-fill fs-2"></i>
+                        </div>
+                    {% endif %}
                     <h5 class="fw-bold">{{ post.author.username }}</h5>
                     <div class="row text-center mt-3">
                         <div class="col-12 mb-2">
                             <span class="badge bg-primary rounded-pill fs-6 px-3 py-2">
-                                {{ post.author.forum_posts.count }} bài viết
+                                {{ author_post_count }} bài viết
                             </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistics -->
+            <div class="card shadow-sm mt-4 border-0">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-graph-up"></i> Thống kê bài viết
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <div class="border-end">
+                                <div class="h4 fw-bold text-primary mb-1">{{ post.view_count }}</div>
+                                <small class="text-muted">Lượt xem</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="border-end">
+                                <div class="h4 fw-bold text-info mb-1">{{ post.comment_count }}</div>
+                                <small class="text-muted">Bình luận</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div>
+                                <div class="h4 fw-bold {% if post.vote_value > 0 %}text-success{% elif post.vote_value < 0 %}text-danger{% else %}text-warning{% endif %} mb-1">
+                                    {% if post.vote_value > 0 %}+{% endif %}{{ post.vote_value }}
+                                </div>
+                                <small class="text-muted">
+                                    <i class="bi bi-arrow-up-circle"></i> Vote
+                                </small>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -205,48 +371,12 @@
                             <i class="bi bi-arrow-left"></i> Về môn học
                         </a>
                         <a href="{% url 'forum:index' %}" class="btn btn-outline-info">
-                            <i class="bi bi-house"></i> Trang chủ diễn đàn
+                            <i class="bi bi-chat-dots me-1"></i> Diễn đàn
                         </a>
                     </div>
                 </div>
             </div>
-
-            <!-- Statistics -->
-            <div class="card shadow-sm mt-4 border-0">
-                <div class="card-header bg-light">
-                    <h5 class="card-title mb-0">
-                        <i class="bi bi-graph-up"></i> Thống kê bài viết
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="row text-center">
-                        <div class="col-6 mb-3">
-                            <div class="border-end">
-                                <div class="h4 fw-bold text-primary mb-1">{{ post.view_count }}</div>
-                                <small class="text-muted">Lượt xem</small>
-                            </div>
-                        </div>
-                        <div class="col-6 mb-3">
-                            <div>
-                                <div class="h4 fw-bold text-success mb-1">5</div>
-                                <small class="text-muted">Bình luận</small>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="border-end">
-                                <div class="h4 fw-bold text-warning mb-1">12</div>
-                                <small class="text-muted">Lượt thích</small>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div>
-                                <div class="h4 fw-bold text-info mb-1">3</div>
-                                <small class="text-muted">Lượt chia sẻ</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            
         </div>
     </div>
 </div>

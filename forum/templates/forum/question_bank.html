@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Ngân Hàng Câu Hỏi{% endblock %}
+
+{% block main %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="bi bi-collection"></i> Ngân Hàng Câu Hỏi
+        </h2>
+        <a href="{% url 'forum:create_question' subject_id %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Thêm Câu Hỏi
+        </a>
+    </div>
+
+    <div class="row">
+        {% for question in questions %}
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span class="badge {% if question.type == 'multiple_choice' %}bg-info{% else %}bg-warning{% endif %}">
+                        {{ question.type|title }}
+                    </span>
+                    <small class="text-muted">{{ question.created_at|date:"d/m/Y" }}</small>
+                </div>
+                <div class="card-body">
+                    <h6 class="card-title">{{ question.content|truncatewords:20 }}</h6>
+                    
+                    {% if question.type == 'multiple_choice' %}
+                        <div class="mt-2">
+                            <small class="text-muted">Lựa chọn:</small>
+                            {% with options=question.options|default:"{}" %}
+                                {% if options != "{}" %}
+                                    <div class="small">
+                                        {% for key, value in options.items %}
+                                            <span class="badge bg-light text-dark me-1">{{ key }}: {{ value|truncatewords:3 }}</span>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            {% endwith %}
+                        </div>
+                    {% else %}
+                        <div class="mt-2">
+                            <small class="text-muted">Giới hạn từ: {{ question.word_limit }}</small>
+                        </div>
+                    {% endif %}
+
+                    {% if question.explanation %}
+                        <p class="card-text small text-muted mt-2">
+                            <strong>Giải thích:</strong> {{ question.explanation|truncatewords:10 }}
+                        </p>
+                    {% endif %}
+                </div>
+                <div class="card-footer bg-transparent">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted">ID: {{ question.id }}</small>
+                        <div>
+                            <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" 
+                                    data-bs-target="#questionModal{{ question.id }}">
+                                <i class="bi bi-eye"></i> Xem
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal -->
+        <div class="modal fade" id="questionModal{{ question.id }}" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Chi Tiết Câu Hỏi</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <h6>Nội dung:</h6>
+                        <p>{{ question.content }}</p>
+                        
+                        {% if question.type == 'multiple_choice' %}
+                            <h6>Lựa chọn:</h6>
+                            <div class="list-group">
+                                {% for key, value in question.options.items %}
+                                    <div class="list-group-item">
+                                        <strong>{{ key }}.</strong> {{ value }}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <p><strong>Giới hạn từ:</strong> {{ question.word_limit }}</p>
+                        {% endif %}
+                        
+                        {% if question.explanation %}
+                            <h6 class="mt-3">Giải thích:</h6>
+                            <p>{{ question.explanation }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="text-center py-5">
+                <i class="bi bi-question-circle display-1 text-muted"></i>
+                <h4 class="text-muted mt-3">Chưa có câu hỏi nào</h4>
+                <p class="text-muted">Hãy tạo câu hỏi đầu tiên cho môn học này</p>
+                <a href="{% url 'forum:create_question' subject_id %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Tạo Câu Hỏi Đầu Tiên
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Lịch Sử Nộp Bài{% endblock %}
+
+{% block main %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{% url 'forum:index' %}" class="text-decoration-none">
+                    <i class="bi bi-house"></i> Diễn đàn
+                </a>
+            </li>
+            <li class="breadcrumb-item active">Lịch sử nộp bài</li>
+        </ol>
+    </nav>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h4 class="card-title mb-0">
+                <i class="bi bi-clock-history"></i> Lịch Sử Nộp Bài
+            </h4>
+        </div>
+        <div class="card-body">
+            {% if submissions %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Thời gian nộp</th>
+                            <th>Thời gian làm</th>
+                            <th>Điểm số</th>
+                            <th>Trạng thái</th>
+                            <th>Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for submission in submissions %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ submission.submitted_at }}</td>
+                            <td>{{ submission.time_spent }} phút</td>
+                            <td>
+                                {% if submission.total_score is not None %}
+                                <span class="badge {% if submission.total_score >= 8 %}bg-success{% elif submission.total_score >= 5 %}bg-warning{% else %}bg-danger{% endif %}">
+                                    {{ submission.total_score }}
+                                </span>
+                                {% else %}
+                                <span class="badge bg-secondary">Chờ chấm</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if submission.total_score is not None %}
+                                <span class="badge bg-success">Đã chấm</span>
+                                {% else %}
+                                <span class="badge bg-warning">Chờ chấm</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'forum:submission_detail' submission.id %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i> Xem chi tiết
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-inbox display-1 text-muted"></i>
+                <h4 class="text-muted mt-3">Chưa có bài nộp nào</h4>
+                <p class="text-muted">Hãy làm bài kiểm tra để xem lịch sử ở đây</p>
+                <a href="{% url 'forum:test_detail' test_id %}" class="btn btn-primary">
+                    <i class="bi bi-arrow-left"></i> Quay lại bài kiểm tra
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

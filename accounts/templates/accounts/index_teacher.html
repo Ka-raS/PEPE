@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Hồ sơ cá nhân{% endblock %}
+{% block title %}Hồ sơ cá nhân - Giảng viên{% endblock %}
 
 {% block main %}
 
@@ -16,40 +16,40 @@
 
 <div class="row g-4">
 
+  <!-- Thông tin cá nhân -->
   <div class="col-lg-8">
     <div class="card shadow-sm">
       <div class="card-body p-4">
 
         <div class="d-flex flex-column flex-md-row align-items-center text-center text-md-start mb-4 pb-4 border-bottom">
-          <form id="avatar-form" method="POST" action="{% url 'accounts:update_avatar' %}" enctype="multipart/form-data" class="position-relative me-md-4 mb-3 mb-md-0">
+          <!-- url 'accounts:update_avatar' -->
+          <form id="avatar-form" method="POST" action="#" enctype="multipart/form-data" class="position-relative me-md-4 mb-3 mb-md-0">
             {% csrf_token %}
             {% if avatar_path %}
               <img id="avatar-preview" src="{{ avatar_path }}" class="rounded-circle profile-avatar" alt="Avatar">
             {% else %}
-              <div id="avatar-preview" class="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center profile-avatar">
-                <i class="bi bi-person-fill" style="font-size: 3rem;"></i>
-              </div>
+              <img id="avatar-preview" src="{% static 'images/avatar_default.png' %}" class="rounded-circle profile-avatar" alt="Avatar">
             {% endif %}
-            <input type="file" name="avatar" id="avatar-input" accept="image/*" class="d-none">
-            <label for="avatar-input" class="btn btn-primary btn-sm rounded-circle position-absolute bottom-0 end-0" style="width: 35px; height: 35px; cursor: pointer;" title="Đổi ảnh đại diện">
-              <i class="bi bi-camera-fill"></i>
-            </label>
+              <input type="file" name="avatar" id="avatar-input" accept="image/*" class="d-none">
+              <label for="avatar-input" class="btn btn-primary btn-sm rounded-circle position-absolute bottom-0 end-0" style="width: 35px; height: 35px; cursor: pointer;" title="Đổi ảnh đại diện">
+                <i class="bi bi-camera-fill"></i>
+              </label>
           </form>
 
           <div class="mt-3 mt-md-0">
             <h2 id="profile-header-name" class="h3 mb-1">{{ full_name|default:username }}</h2>
-            <p id="profile-header-major" class="text-muted mb-2">
-              {% if major_name %}
-                Sinh viên Khoa {{ major_name }}
+            <p id="profile-header-role" class="text-muted mb-2">
+              {% if title %}
+                {{ title }}
               {% else %}
-                Chưa cập nhật chuyên ngành
+                Chưa cập nhật chức danh
               {% endif %}
             </p>
             <span class="badge bg-success"><i class="bi bi-patch-check-fill me-1"></i>Tài khoản đã xác thực</span>
           </div>
         </div>
-        <!-- url 'accounts:index_student' -->
-        <form method="POST" action="{% url 'accounts:index' %}">
+
+        <form method="POST" action="{% url 'accounts:index_teacher' %}">
           {% csrf_token %}
           <div class="info-section">
             <div class="section-header">
@@ -63,35 +63,52 @@
               <div class="info-item">
                 <label>Họ và tên</label>
                 <p class="info-value">{{ full_name|default:"Chưa cập nhật" }}</p>
-                <input type="text" name="full_name" class="form-control info-input" value="{{ full_name }}">
+                <input type="text" name="full_name" class="form-control info-input" value="{{ full_name|default:"Chưa đặt hồ sơ" }}">
               </div>
+
               <div class="info-item">
                 <label>Tên đăng nhập</label>
                 <p class="info-value">{{ username }}</p>
                 <input type="text" class="form-control info-input" value="{{ username }}" disabled>
               </div>
+
               <div class="info-item">
                 <label>Email</label>
                 <p class="info-value">{{ email }}</p>
                 <input type="email" class="form-control info-input" value="{{ email }}" disabled>
               </div>
 
+              <!-- Chức danh -->
               <div class="info-item">
-                <label for="major_id">Ngành</label>
-                <p class="info-value" id="major-display">
-                  {{ major_name|default:"Chưa cập nhật" }}
-                </p>
-                <div class="info-input" id="major-input" style="display: none;">
-                  <select name="major_id" id="major_id" class="form-control">
-                    <option value="">-- Chọn ngành --</option>
-                    {% for i_major in all_major %}
-                      <option value="{{ i_major.id }}" {% if i_major.id == current_major_id %}selected{% endif %}>
-                        {{ i_major.name }}
-                      </option>
-                    {% endfor %}
-                  </select>
-                </div>
+                <label>Chức danh</label>
+                <p class="info-value" id="title-display">{{ title|default:"Chưa cập nhật" }}</p>
+                <select name="title" class="form-control info-input" id="title-input" style="display: none;">
+                    <option value="Giảng viên" {% if title == "Giảng viên" %}selected{% endif %}>Giảng viên</option>
+                    <option value="Trưởng khoa" {% if title == "Trưởng khoa" %}selected{% endif %}>Trưởng khoa</option>
+                    <option value="Phó khoa" {% if title == "Phó khoa" %}selected{% endif %}>Phó khoa</option>
+                </select>
               </div>
+
+              <!-- Khoa -->
+              <div class="info-item">
+                <label>Khoa</label>
+                <p class="info-value" id="department-display">
+                    {% for dep in all_departments %}
+                        {% if dep.id == current_department_id %}
+                            {{ dep.name }}
+                        {% endif %}
+                    {% empty %}
+                        Chưa cập nhật
+                    {% endfor %}
+                </p>
+                <select name="department" class="form-control info-input" id="department-input" style="display: none;">
+                    <option value="">-- Chọn khoa --</option>
+                    {% for dep in all_departments %}
+                        <option value="{{ dep.id }}" {% if dep.id == current_department_id %}selected{% endif %}>{{ dep.name }}</option>
+                    {% endfor %}
+                </select>
+              </div>
+
             </div>
 
             <div id="action-buttons" class="mt-4" style="display: none;">
@@ -105,9 +122,11 @@
     </div>
   </div>
 
+  <!-- Thống kê và hoạt động -->
   <div class="col-lg-4">
     <div class="sticky-top" style="top: 20px;">
       <div class="d-grid gap-4">
+
         <div class="card shadow-sm">
           <div class="card-header">
             <h6 class="mb-0"><i class="bi bi-activity me-2"></i>Thống kê hoạt động</h6>
@@ -128,7 +147,7 @@
           </ul>
         </div>
 
-        <!-- <div class="card shadow-sm">
+        <div class="card shadow-sm">
           <div class="card-header">
             <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>Hoạt động gần đây</h6>
           </div>
@@ -139,7 +158,8 @@
               <li><i class="bi bi-download text-info me-2"></i>Tải về tài liệu "Slide Giải tích 1".</li>
             </ul>
           </div>
-        </div> -->
+        </div>
+
       </div>
     </div>
   </div>
@@ -171,49 +191,37 @@
     const infoSection = document.querySelector('.info-section');
     const editBtn = document.getElementById('edit-btn');
     const actionBtns = document.getElementById('action-buttons');
+
     const infoValues = infoSection.querySelectorAll('.info-value');
     const infoInputs = infoSection.querySelectorAll('.info-input');
-    const majorDisplay = document.getElementById('major-display');
-    const majorInput = document.getElementById('major-input');
+
+    const titleDisplay = document.getElementById('title-display');
+    const titleInput = document.getElementById('title-input');
+    const departmentDisplay = document.getElementById('department-display');
+    const departmentInput = document.getElementById('department-input');
 
     if (isEditing) {
       editBtn.style.display = 'none';
       actionBtns.style.display = 'block';
       infoValues.forEach(el => el.style.display = 'none');
       infoInputs.forEach(el => el.style.display = 'block');
-      if (majorDisplay && majorInput) {
-        majorDisplay.style.display = 'none';
-        majorInput.style.display = 'block';
-      }
+
+      if(titleDisplay && titleInput) { titleDisplay.style.display = 'none'; titleInput.style.display = 'block'; }
+      if(departmentDisplay && departmentInput) { departmentDisplay.style.display = 'none'; departmentInput.style.display = 'block'; }
     } else {
       editBtn.style.display = 'block';
       actionBtns.style.display = 'none';
       infoValues.forEach(el => el.style.display = 'block');
       infoInputs.forEach(el => el.style.display = 'none');
-      if (majorDisplay && majorInput) {
-        majorDisplay.style.display = 'block';
-        majorInput.style.display = 'none';
-      }
+
+      if(titleDisplay && titleInput) { titleDisplay.style.display = 'block'; titleInput.style.display = 'none'; }
+      if(departmentDisplay && departmentInput) { departmentDisplay.style.display = 'block'; departmentInput.style.display = 'none'; }
     }
   }
 </script>
 
 <style>
-  body {
-    background-color: #f8f9fa;
-  }
-
-  .bg-custom-dark {
-    background-color: #2c3e50 !important;
-  }
-
-  .bg-custom-secondary {
-    background-color: #34495e !important;
-  }
-
-  .text-custom-blue {
-    color: #3498db !important;
-  }
+  body { background-color: #f8f9fa; }
 
   .profile-avatar {
     width: 120px;
@@ -224,9 +232,7 @@
     margin-bottom: 0.5rem;
   }
 
-  .info-section {
-    margin-bottom: 2rem;
-  }
+  .info-section { margin-bottom: 2rem; }
 
   .section-header {
     display: flex;
@@ -260,8 +266,6 @@
     align-items: center;
   }
 
-  .info-input {
-    display: none;
-  }
+  .info-input { display: none; }
 </style>
 {% endblock %}

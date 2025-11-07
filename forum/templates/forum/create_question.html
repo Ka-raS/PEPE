@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Tạo Câu Hỏi Mới{% endblock %}
+
+{% block main %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="card-title mb-0">
+                        <i class="bi bi-plus-circle"></i> Tạo Câu Hỏi Mới
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="question_type" class="form-label">Loại câu hỏi</label>
+                            <select class="form-select" id="question_type" name="question_type" required>
+                                <option value="">Chọn loại câu hỏi</option>
+                                <option value="multiple_choice">Trắc nghiệm</option>
+                                <option value="essay">Tự luận</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="content" class="form-label">Nội dung câu hỏi</label>
+                            <textarea class="form-control" id="content" name="content" rows="4" required 
+                                      placeholder="Nhập nội dung câu hỏi..."></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="explanation" class="form-label">Giải thích (tùy chọn)</label>
+                            <textarea class="form-control" id="explanation" name="explanation" rows="3"
+                                      placeholder="Giải thích đáp án..."></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="attachment" class="form-label">File đính kèm (tùy chọn)</label>
+                            <input type="file" class="form-control" id="attachment" name="attachment"
+                                   accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+                            <div class="form-text">Định dạng: PDF, DOC, DOCX, JPG, PNG (tối đa 5MB)</div>
+                        </div>
+
+                        <!-- Multiple Choice Fields -->
+                        <div id="multiple_choice_fields" style="display: none;">
+                            <div class="mb-3">
+                                <label for="options" class="form-label">Các lựa chọn (JSON format)</label>
+                                <textarea class="form-control" id="options" name="options" rows="4"
+                                          placeholder='{"A": "Lựa chọn A", "B": "Lựa chọn B", "C": "Lựa chọn C", "D": "Lựa chọn D"}'></textarea>
+                                <div class="form-text">
+                                    Định dạng JSON: {"key": "value"}<br>
+                                    Ví dụ: {"A": "Đáp án A", "B": "Đáp án B", "C": "Đáp án C", "D": "Đáp án D"}
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check mb-3">
+                                        <input class="form-check-input" type="checkbox" id="allow_multiple" name="allow_multiple">
+                                        <label class="form-check-label" for="allow_multiple">
+                                            Cho phép chọn nhiều đáp án
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check mb-3">
+                                        <input class="form-check-input" type="checkbox" id="randomize_options" name="randomize_options" checked>
+                                        <label class="form-check-label" for="randomize_options">
+                                            Xáo trộn thứ tự đáp án
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Essay Fields -->
+                        <div id="essay_fields" style="display: none;">
+                            <div class="mb-3">
+                                <label for="word_limit" class="form-label">Giới hạn từ</label>
+                                <input type="number" class="form-control" id="word_limit" name="word_limit" 
+                                       value="0" min="0">
+                                <div class="form-text">0 = không giới hạn</div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'forum:question_bank' subject_id %}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Quay lại
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> Tạo Câu Hỏi
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const questionType = document.getElementById('question_type');
+    const mcFields = document.getElementById('multiple_choice_fields');
+    const essayFields = document.getElementById('essay_fields');
+
+    function toggleFields() {
+        const value = questionType.value;
+        mcFields.style.display = value === 'multiple_choice' ? 'block' : 'none';
+        essayFields.style.display = value === 'essay' ? 'block' : 'none';
+    }
+
+    questionType.addEventListener('change', toggleFields);
+    toggleFields(); // Initialize on page load
+});
+</script>
+{% endblock %}

@@ -10,9 +10,9 @@
       <div class="d-flex align-items-center gap-2" id="authSection">
         {% if is_authenticated %}
           <div class="dropdown">
-            <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+            <a href="{% url 'accounts:index' %}" class="btn btn-outline-light btn-sm">
               <i class="bi bi-person-circle me-1"></i>{{ username }}
-            </button>
+            </a>
             <a href="{% url 'accounts:logout' %}" class="btn btn-outline-danger btn-sm" title="Đăng xuất"
               onclick="return confirm('Bạn có chắc chắn muốn đăng xuất không?');">
               <i class="bi bi-box-arrow-right"></i>

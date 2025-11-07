@@ -104,7 +104,7 @@
       <div class="sticky-top" style="top: 20px;">
         <div class="d-grid gap-4">
           
-          {% if is_authenticated %}
+          {% if is_authenticated and user_type == 'student' %}
           <div class="card text-center shadow-sm">
             <div class="card-body">
               <h6 class="card-title text-muted">SỐ COIN HIỆN CÓ</h6>
@@ -136,7 +136,7 @@
             </form>
           </div>
 
-          <div class="card shadow-sm">
+          <!-- <div class="card shadow-sm">
             <div class="card-header">
               <h6 class="mb-0"><i class="bi bi-bell me-2"></i>Thông báo mới</h6>
             </div>
@@ -144,23 +144,25 @@
               <li class="list-group-item small">Bạn vừa nhận được 50 coin vì đạt điểm cao.</li>
               <li class="list-group-item small">Tài liệu "Giải tích 1" của bạn có bình luận mới.</li>
             </ul>
-          </div>
+          </div> -->
           {% endif %}
 
-          <div class="card shadow-sm">
-            <div class="card-header bg-secondary text-white">
-              <h6 class="mb-0"><i class="bi bi-lightning me-2"></i>Liên kết nhanh</h6>
+          <!-- Quick Actions -->
+          <div class="card shadow-sm border-0">
+            <div class="card-header bg-primary text-white">
+              <h5 class="card-title mb-0">
+                <i class="bi bi-lightning"></i> Hành động nhanh
+              </h5>
             </div>
-            <div class="card-body">
-              <div class="d-grid gap-2">
-                {% if is_authenticated %}
-                <a href="{% url 'forum:create_post' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil-square me-1"></i>Viết bài mới</a>
-                {% endif %}
-                <a href="#" class="btn btn-outline-success btn-sm"><i class="bi bi-search me-1"></i>Tìm kiếm bài đăng</a>
-                <a href="#" class="btn btn-outline-info btn-sm"><i class="bi bi-question-circle me-1"></i>Trợ giúp</a>
-              </div>
-            </div>
-          </div>
+          <div class="card-body">
+          <div class="d-grid gap-2">
+            <a href="{% url 'forum:create_post' %}?subject_id={{ post.subject.id }}" class="btn btn-outline-primary">
+              <i class="bi bi-pencil"></i> Viết bài mới
+            </a>
+            <a href="{% url 'forum:index' %}" class="btn btn-outline-info">
+              <i class="bi bi-chat-dots me-1"></i> Diễn đàn
+            </a>
+          </div>                
         </div>
       </div>
     </div>
