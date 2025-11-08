@@ -14,7 +14,7 @@
                     </h4>
                 </div>
                 <div class="card-body">
-                    <form method="post" enctype="multipart/form-data">
+                    <form method="post" enctype="multipart/form-data" id="question-form">
                         {% csrf_token %}
                         
                         <div class="mb-3">
@@ -26,7 +26,7 @@
                             </select>
                         </div>
 
-                        <div class="mb-3">
+                        <div class="mb-3">1
                             <label for="content" class="form-label">Nội dung câu hỏi</label>
                             <textarea class="form-control" id="content" name="content" rows="4" required 
                                       placeholder="Nhập nội dung câu hỏi..."></textarea>
@@ -48,15 +48,102 @@
                         <!-- Multiple Choice Fields -->
                         <div id="multiple_choice_fields" style="display: none;">
                             <div class="mb-3">
-                                <label for="options" class="form-label">Các lựa chọn (JSON format)</label>
-                                <textarea class="form-control" id="options" name="options" rows="4"
-                                          placeholder='{"A": "Lựa chọn A", "B": "Lựa chọn B", "C": "Lựa chọn C", "D": "Lựa chọn D"}'></textarea>
-                                <div class="form-text">
-                                    Định dạng JSON: {"key": "value"}<br>
-                                    Ví dụ: {"A": "Đáp án A", "B": "Đáp án B", "C": "Đáp án C", "D": "Đáp án D"}
+                                <label class="form-label">Các lựa chọn và đáp án đúng</label>
+                                <div id="options-container">
+                                    <div class="option-item mb-2">
+                                        <div class="input-group">
+                                            <span class="input-group-text">A</span>
+                                            <input type="text" class="form-control option-input" name="option_A" 
+                                                   placeholder="Lựa chọn A" required>
+                                            <div class="input-group-text">
+                                                <input class="form-check-input mt-0 correct-answer" type="radio" 
+                                                       name="correct_answer" value="A" required>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="option-item mb-2">
+                                        <div class="input-group">
+                                            <span class="input-group-text">B</span>
+                                            <input type="text" class="form-control option-input" name="option_B" 
+                                                   placeholder="Lựa chọn B" required>
+                                            <div class="input-group-text">
+                                                <input class="form-check-input mt-0 correct-answer" type="radio" 
+                                                       name="correct_answer" value="B">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="option-item mb-2">
+                                        <div class="input-group">
+                                            <span class="input-group-text">C</span>
+                                            <input type="text" class="form-control option-input" name="option_C" 
+                                                   placeholder="Lựa chọn C" required>
+                                            <div class="input-group-text">
+                                                <input class="form-check-input mt-0 correct-answer" type="radio" 
+                                                       name="correct_answer" value="C">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="option-item mb-2">
+                                        <div class="input-group">
+                                            <span class="input-group-text">D</span>
+                                            <input type="text" class="form-control option-input" name="option_D" 
+                                                   placeholder="Lựa chọn D" required>
+                                            <div class="input-group-text">
+                                                <input class="form-check-input mt-0 correct-answer" type="radio" 
+                                                       name="correct_answer" value="D">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Trong create_question.html, thêm sau phần options -->
+                            <div class="mb-3">
+                                <label class="form-label"><strong>Đáp án đúng:</strong></label>
+                                
+                                <!-- Cho single choice -->
+                                <div id="singleCorrectContainer">
+                                    <select name="correct_answer" class="form-select">
+                                        <option value="">-- Chọn đáp án đúng --</option>
+                                        <option value="A">A</option>
+                                        <option value="B">B</option>
+                                        <option value="C">C</option>
+                                        <option value="D">D</option>
+                                    </select>
+                                </div>
+                                
+                                <!-- Cho multiple choice -->
+                                <div id="multipleCorrectContainer" style="display: none;">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="correct_answers_multiple" value="A" id="correctA">
+                                        <label class="form-check-label" for="correctA">A</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="correct_answers_multiple" value="B" id="correctB">
+                                        <label class="form-check-label" for="correctB">B</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="correct_answers_multiple" value="C" id="correctC">
+                                        <label class="form-check-label" for="correctC">C</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="correct_answers_multiple" value="D" id="correctD">
+                                        <label class="form-check-label" for="correctD">D</label>
+                                    </div>
                                 </div>
                             </div>
 
+                            <script>
+                            // Hiển thị đúng loại chọn đáp án dựa trên allow_multiple
+                            document.getElementById('allow_multiple').addEventListener('change', function() {
+                                if (this.checked) {
+                                    document.getElementById('singleCorrectContainer').style.display = 'none';
+                                    document.getElementById('multipleCorrectContainer').style.display = 'block';
+                                } else {
+                                    document.getElementById('singleCorrectContainer').style.display = 'block';
+                                    document.getElementById('multipleCorrectContainer').style.display = 'none';
+                                }
+                            });
+                            </script>
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="form-check mb-3">
@@ -72,6 +159,29 @@
                                         <label class="form-check-label" for="randomize_options">
                                             Xáo trộn thứ tự đáp án
                                         </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Multiple correct answers (hidden by default) -->
+                            <div id="multiple_correct_answers" style="display: none;">
+                                <div class="mb-3">
+                                    <label class="form-label">Chọn nhiều đáp án đúng</label>
+                                    <div class="form-check">
+                                        <input class="form-check-input correct-multiple" type="checkbox" name="correct_answers_multiple" value="A">
+                                        <label class="form-check-label">A</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input correct-multiple" type="checkbox" name="correct_answers_multiple" value="B">
+                                        <label class="form-check-label">B</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input correct-multiple" type="checkbox" name="correct_answers_multiple" value="C">
+                                        <label class="form-check-label">C</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input correct-multiple" type="checkbox" name="correct_answers_multiple" value="D">
+                                        <label class="form-check-label">D</label>
                                     </div>
                                 </div>
                             </div>
@@ -107,15 +217,103 @@ document.addEventListener('DOMContentLoaded', function() {
     const questionType = document.getElementById('question_type');
     const mcFields = document.getElementById('multiple_choice_fields');
     const essayFields = document.getElementById('essay_fields');
+    const allowMultiple = document.getElementById('allow_multiple');
+    const multipleCorrectAnswers = document.getElementById('multiple_correct_answers');
+    const correctAnswers = document.querySelectorAll('.correct-answer');
+    const correctMultiple = document.querySelectorAll('.correct-multiple');
 
     function toggleFields() {
         const value = questionType.value;
         mcFields.style.display = value === 'multiple_choice' ? 'block' : 'none';
         essayFields.style.display = value === 'essay' ? 'block' : 'none';
+        
+        // Reset required attributes
+        if (value === 'multiple_choice') {
+            document.querySelectorAll('.option-input').forEach(input => {
+                input.required = true;
+            });
+            document.querySelector('.correct-answer').required = true;
+        } else {
+            document.querySelectorAll('.option-input').forEach(input => {
+                input.required = false;
+            });
+            document.querySelector('.correct-answer').required = false;
+        }
     }
 
+    function toggleMultipleAnswers() {
+        const isMultiple = allowMultiple.checked;
+        multipleCorrectAnswers.style.display = isMultiple ? 'block' : 'none';
+        
+        // Toggle between radio and checkbox
+        correctAnswers.forEach(radio => {
+            radio.style.display = isMultiple ? 'none' : 'inline-block';
+            radio.required = !isMultiple;
+        });
+        
+        // Toggle multiple checkboxes
+        correctMultiple.forEach(checkbox => {
+            checkbox.required = isMultiple;
+        });
+
+        // Update form validation
+        if (isMultiple) {
+            document.querySelectorAll('.correct-answer').forEach(radio => {
+                radio.removeAttribute('required');
+            });
+        } else {
+            document.querySelector('.correct-answer').required = true;
+        }
+    }
+
+    // Form validation
+    document.getElementById('question-form').addEventListener('submit', function(e) {
+        const type = questionType.value;
+        
+        if (type === 'multiple_choice') {
+            const isMultiple = allowMultiple.checked;
+            
+            if (isMultiple) {
+                // Check if at least one correct answer is selected for multiple choice
+                const checkedMultiple = document.querySelectorAll('.correct-multiple:checked');
+                if (checkedMultiple.length === 0) {
+                    e.preventDefault();
+                    alert('Vui lòng chọn ít nhất một đáp án đúng');
+                    return;
+                }
+            } else {
+                // Check if a correct answer is selected for single choice
+                const checkedSingle = document.querySelector('.correct-answer:checked');
+                if (!checkedSingle) {
+                    e.preventDefault();
+                    alert('Vui lòng chọn đáp án đúng');
+                    return;
+                }
+            }
+        }
+    });
+
     questionType.addEventListener('change', toggleFields);
-    toggleFields(); // Initialize on page load
+    allowMultiple.addEventListener('change', toggleMultipleAnswers);
+
+    // Initialize
+    toggleFields();
+    toggleMultipleAnswers();
 });
 </script>
+
+<style>
+.option-item .input-group-text {
+    background-color: #f8f9fa;
+    border-color: #dee2e6;
+}
+
+.correct-answer {
+    cursor: pointer;
+}
+
+.form-check-input {
+    cursor: pointer;
+}
+</style>
 {% endblock %}

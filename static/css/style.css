@@ -9,3 +9,207 @@
 .text-custom-blue {
     color: #3498db !important;
 }
+
+.rounded-nav-link {
+    border-radius: 10px;
+    margin: 0 5px;
+    transition: all 0.3s ease;
+}
+
+.rounded-nav-link:hover {
+    transform: translateY(-2px);
+}
+
+.rounded-nav-link.active {
+    border-radius: 10px;
+}
+
+.rounded-search {
+    border-radius: 10px;
+    border: none;
+    transition: all 0.3s ease;
+}
+
+.rounded-search:focus {
+    box-shadow: 0 0 0 0.25rem rgba(52, 152, 219, 0.25);
+    border-color: #3498db;
+}
+
+.rounded-card {
+    border-radius: 15px !important;
+    transition: transform 0.2s ease-in-out;
+    border: none;
+}
+
+.rounded-card:hover {
+    transform: translateY(-2px);
+}
+
+.rounded-card-header {
+    border-radius: 15px 15px 0 0 !important;
+    border: none;
+}
+
+.rounded-btn {
+    border-radius: 10px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.rounded-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.btn-outline-primary.rounded-btn {
+    background: linear-gradient(135deg, #0d6efd, #0a58ca);
+    color: white;
+    border: none;
+}
+
+.btn-outline-primary.rounded-btn:hover {
+    background: linear-gradient(135deg, #0a58ca, #084298);
+    box-shadow: 0 4px 15px rgba(13, 110, 253, 0.4);
+}
+
+.btn-outline-info.rounded-btn {
+    background: linear-gradient(135deg, #0dcaf0, #0aa2c0);
+    color: white;
+    border: none;
+}
+
+.btn-outline-info.rounded-btn:hover {
+    background: linear-gradient(135deg, #0aa2c0, #087990);
+    box-shadow: 0 4px 15px rgba(13, 202, 240, 0.4);
+}
+
+.rounded-list-item {
+    border-radius: 10px;
+    margin-bottom: 8px;
+    transition: all 0.2s ease;
+    border: none;
+}
+
+.rounded-list-item:hover {
+    transform: translateX(5px);
+}
+
+.list-group-item {
+    background: transparent;
+    border: none;
+}
+
+.badge {
+    font-size: 0.75em;
+    border-radius: 8px;
+}
+
+.navbar-brand {
+    transition: all 0.3s ease;
+}
+
+.navbar-brand:hover {
+    transform: scale(1.05);
+}
+
+.navbar-toggler {
+    border: none;
+}
+
+.navbar-toggler:focus {
+    box-shadow: 0 0 0 0.25rem rgba(52, 152, 219, 0.25);
+}
+
+.btn-primary.rounded-btn {
+    background: linear-gradient(135deg, #0d6efd, #0a58ca);
+    border: none;
+}
+
+.btn-primary.rounded-btn:hover {
+    background: linear-gradient(135deg, #0a58ca, #084298);
+    box-shadow: 0 4px 15px rgba(13, 110, 253, 0.4);
+}
+
+.alert.rounded-card {
+    border-radius: 15px;
+    border: none;
+}
+
+.card.h-100 {
+    height: 100%;
+}
+
+.breadcrumb {
+    background: none;
+    padding: 0;
+}
+
+.breadcrumb-item a {
+    color: #6c757d;
+    text-decoration: none;
+}
+
+.breadcrumb-item a:hover {
+    color: #198754;
+}
+
+.breadcrumb-item.active {
+    color: #198754;
+    font-weight: 500;
+}
+
+.post-item {
+    transition: background-color 0.2s ease;
+    border: none !important;
+}
+
+.post-item:hover {
+    background-color: #f8f9fa;
+}
+
+.post-item:last-child {
+    border-bottom: none !important;
+}
+
+.rounded-pagination {
+    border-radius: 10px !important;
+    margin: 0 2px;
+    border: none;
+}
+
+.btn-outline-success.rounded-btn {
+    background: linear-gradient(135deg, #198754, #157347);
+    color: white;
+    border: none;
+}
+
+.btn-outline-success.rounded-btn:hover {
+    background: linear-gradient(135deg, #157347, #0f5132);
+    box-shadow: 0 4px 15px rgba(25, 135, 84, 0.4);
+}
+
+.btn-outline-warning.rounded-btn {
+    background: linear-gradient(135deg, #ffc107, #ffb300);
+    color: #000;
+    border: none;
+}
+
+.btn-outline-warning.rounded-btn:hover {
+    background: linear-gradient(135deg, #ffb300, #ffa000);
+    box-shadow: 0 4px 15px rgba(255, 193, 7, 0.4);
+}
+
+.btn-outline-secondary.rounded-btn {
+    background: linear-gradient(135deg, #6c757d, #5a6268);
+    color: white;
+    border: none;
+}
+
+.btn-outline-secondary.rounded-btn:hover {
+    background: linear-gradient(135deg, #5a6268, #4e555b);
+    box-shadow: 0 4px 15px rgba(108, 117, 125, 0.4);
+}
+
+.progress {
+    border-radius: 10px;
+}

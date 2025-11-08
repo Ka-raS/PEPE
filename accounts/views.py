@@ -34,7 +34,8 @@ def index(request):
     context = {
         'is_authenticated': True,
         'user_type': user_type,
-        'username': request.session.get('username', ''),
+        'user_id': user_id,
+        'username': request.session.get('username'),
         'email': request.session.get('email', ''),
         'avatar_path': None,
         'full_name': '',
@@ -71,28 +72,30 @@ def index(request):
                     cursor.execute("SELECT id FROM students WHERE id = %s", [user_id])
                     if cursor.fetchone():
                         cursor.execute("""
-                            UPDATE students SET major_id = %s, enrollment_year = %s WHERE id = %s
+                            UPDATE students 
+                            SET major_id = %s, enrollment_year = %s 
+                            WHERE id = %s
                         """, [major_id, enrollment_year, user_id])
                     else:
                         cursor.execute("""
-                            INSERT INTO students (id, major_id, enrollment_year) VALUES (%s, %s, %s)
+                            INSERT INTO students (id, major_id, enrollment_year) 
+                            VALUES (%s, %s, %s)
                         """, [user_id, major_id, enrollment_year])
                 
                 elif user_type == 'teacher':
                     title = request.POST.get('title', '').strip()
                     department_id = request.POST.get('department') or None
-                    experience_years = request.POST.get('experience_years', 0)
                     subjects_taught_ids = request.POST.getlist('subjects_taught')
                     
                     cursor.execute("SELECT id FROM teachers WHERE id = %s", [user_id])
                     if cursor.fetchone():
                         cursor.execute("""
-                            UPDATE teachers SET title = %s, department_id = %s, experience_years = %s WHERE id = %s
-                        """, [title, department_id, experience_years, user_id])
+                            UPDATE teachers SET title = %s, department_id = %s WHERE id = %s
+                        """, [title, department_id, user_id])
                     else:
                         cursor.execute("""
-                            INSERT INTO teachers (id, title, department_id, experience_years) VALUES (%s, %s, %s, %s)
-                        """, [user_id, title, department_id, experience_years])
+                            INSERT INTO teachers (id, title, department_id) VALUES (%s, %s, %s, %s)
+                        """, [user_id, title, department_id])
                     
                     # Cập nhật bảng N-N teacher_subjects
                     cursor.execute("DELETE FROM teacher_subjects WHERE teacher_id = %s", [user_id])
@@ -107,7 +110,6 @@ def index(request):
 
         except Exception as e:
             messages.error(request, f'Cập nhật thất bại: {e}')
-            print(f"Lỗi POST index (gộp): {e}")
 
     # --- XỬ LÝ GET (Hiển thị thông tin) ---
     try:
@@ -195,7 +197,7 @@ def index(request):
             elif user_type == 'teacher':
                 # Lấy dữ liệu GIẢNG VIÊN
                 cursor.execute("""
-                    SELECT t.title, t.department_id, d.name AS department_name, t.experience_years
+                    SELECT t.title, t.department_id, d.name AS department_name
                     FROM teachers t
                     LEFT JOIN departments d ON t.department_id = d.id
                     WHERE t.id = %s
@@ -206,28 +208,11 @@ def index(request):
                     context['title'] = teacher_data[0]
                     context['current_department_id'] = teacher_data[1]
                     context['department_name'] = teacher_data[2]
-                    context['experience_years'] = teacher_data[3] or 0
                 
                 # Lấy danh sách departments
                 cursor.execute("SELECT id, name FROM departments ORDER BY name")
                 context['all_departments'] = [{'id': row[0], 'name': row[1]} for row in cursor.fetchall()]
                 
-                # Lấy tất cả subjects
-                cursor.execute("SELECT id, name FROM subjects ORDER BY name") 
-                context['all_subjects'] = [{'id': row[0], 'name': row[1]} for row in cursor.fetchall()]
-                
-                # Lấy subjects của teacher
-                cursor.execute("SELECT subject_id FROM teacher_subjects WHERE teacher_id = %s", [user_id])
-                current_subject_ids = {row[0] for row in cursor.fetchall()}
-                context['current_subject_ids'] = current_subject_ids
-                
-                # Tạo danh sách tên môn học
-                subjects_taught_names = []
-                for subject in context['all_subjects']:
-                    if subject['id'] in current_subject_ids:
-                        subjects_taught_names.append(subject['name'])
-                context['subjects_taught_names'] = subjects_taught_names
-
                 # THÊM: Lấy thống kê thực tế cho giảng viên
                 # Số bài kiểm tra đã tạo
                 cursor.execute("SELECT COUNT(*) FROM tests WHERE author_id = %s", [user_id])
@@ -280,7 +265,6 @@ def index(request):
             
     except Exception as e:
         messages.error(request, f"Lỗi khi tải dữ liệu trang: {e}")
-        print(f"Lỗi GET index (gộp): {e}")
 
     return render(request, 'accounts/index.html', context)
 
@@ -378,9 +362,8 @@ def update_avatar(request):
         messages.error(request, 'Vui lòng đăng nhập')
         return redirect('accounts:login')
     
-    if request.method != 'POST':
+    if request.method != 'POST':        
         return redirect('accounts:index_student')
-    
     user_id = request.session.get('user_id')
     avatar_file = request.FILES.get('avatar')
     
@@ -402,7 +385,7 @@ def update_avatar(request):
     
     try:
         # Tạo tên file unique
-        file_name = f"avatar_{user_id}_{hash(avatar_file.name)}{file_ext}"
+        file_name = f"{user_id}_{hash(avatar_file.name)}{file_ext}"
         file_path = Path('avatars') / file_name
 
         # Xóa avatar cũ nếu có
@@ -434,5 +417,5 @@ def update_avatar(request):
         
     except Exception as e:
         messages.error(request, f'Lỗi khi tải ảnh: {str(e)}')
-    
+
     return redirect('accounts:index')

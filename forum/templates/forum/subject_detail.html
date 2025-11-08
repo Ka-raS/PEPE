@@ -4,7 +4,7 @@
 {% block title %}{{ subject.name }}{% endblock %}
 
 {% block main %}
-
+<div class="container mt-4">
 <nav aria-label="breadcrumb" class="mb-4">
     <ol class="breadcrumb">
         <li class="breadcrumb-item">
@@ -25,7 +25,7 @@
                 <p class="lead text-muted mb-0">{{ subject.description }}</p>
             </div>
             <div class="d-flex gap-2">
-                <a href="{% url 'forum:create_post' %}?subject_id={{ subject.id }}" class="btn btn-primary">
+                <a href="{% url 'forum:create_post' %}?subject_id={{ subject.id }}" class="btn btn-primary rounded-btn">
                     <i class="bi bi-plus-circle"></i> Bài viết mới
                 </a>
             </div>
@@ -37,12 +37,12 @@
     <!-- Main Content - Posts -->
     <div class="col-lg-8">
         <!-- Posts Section -->
-        <div class="card shadow-sm mb-4">
-            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <div class="card shadow-sm mb-4 border-0 rounded-card">
+            <div class="card-header bg-primary text-white rounded-card-header py-3 d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">
-                    <i class="bi bi-chat-text text-primary"></i> Bài viết mới nhất
+                    <i class="bi bi-chat-text"></i> Bài viết mới nhất
                 </h5>
-                <span class="badge bg-primary">{{ posts|length }} bài viết</span>
+                <span class="badge bg-light text-dark">{{ posts|length }} bài viết</span>
             </div>
             <div class="card-body p-0">
                 {% for post in posts %}
@@ -78,7 +78,7 @@
                             </span>
                             {% endif %}
                         </div>
-                        <a href="{% url 'forum:post_detail' post.id %}" class="btn btn-outline-primary btn-sm">
+                        <a href="{% url 'forum:post_detail' post.id %}" class="btn btn-outline-primary btn-sm rounded-btn">
                             Đọc tiếp <i class="bi bi-arrow-right"></i>
                         </a>
                     </div>
@@ -87,7 +87,7 @@
                 <div class="text-center py-5">
                     <i class="bi bi-chat-square-text display-1 text-muted"></i>
                     <p class="text-muted mt-3">Chưa có bài viết nào trong môn học này</p>
-                    <a href="{% url 'forum:create_post' %}?subject_id={{ subject.id }}" class="btn btn-primary">
+                    <a href="{% url 'forum:create_post' %}?subject_id={{ subject.id }}" class="btn btn-primary rounded-btn">
                         <i class="bi bi-pencil"></i> Viết bài đầu tiên
                     </a>
                 </div>
@@ -97,34 +97,36 @@
 
         <!-- Pagination -->
         <nav aria-label="Page navigation">
-            <ul class="pagination justify-content-center">
-                <li class="page-item disabled">
-                    <a class="page-link" href="#">Trước</a>
-                </li>
-                <li class="page-item active"><a class="page-link" href="#">1</a></li>
-                <li class="page-item"><a class="page-link" href="#">2</a></li>
-                <li class="page-item"><a class="page-link" href="#">3</a></li>
-                <li class="page-item">
-                    <a class="page-link" href="#">Tiếp</a>
-                </li>
-            </ul>
+            <div class="d-flex justify-content-center">
+                <ul class="pagination mb-0">
+                    <li class="page-item disabled">
+                        <a class="page-link" href="#">Trước</a>
+                    </li>
+                    <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                    <li class="page-item"><a class="page-link" href="#">2</a></li>
+                    <li class="page-item"><a class="page-link" href="#">3</a></li>
+                    <li class="page-item">
+                        <a class="page-link" href="#">Tiếp</a>
+                    </li>
+                </ul>
+            </div>
         </nav>
     </div>
 
     <!-- Sidebar -->
     <div class="col-lg-4">
-        <!-- Tests Section (Gộp cả tests và quizzes) -->
-        <div class="card shadow-sm mb-4">
-            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <!-- Tests Section -->
+        <div class="card shadow-sm mb-4 border-0 rounded-card">
+            <div class="card-header bg-success text-white rounded-card-header py-3 d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">
-                    <i class="bi bi-file-earmark-text text-success"></i> Bài kiểm tra & Trắc nghiệm
+                    <i class="bi bi-file-earmark-text"></i> Bài kiểm tra
                 </h5>
                 <div class="d-flex gap-1">
-                    <a href="{% url 'forum:create_test' subject.id %}" class="btn btn-success btn-sm">
+                    <a href="{% url 'forum:create_test' subject.id %}" class="btn btn-light btn-sm rounded-btn">
                         <i class="bi bi-plus"></i> Thêm
                     </a>
-                    <a href="{% url 'forum:question_bank' subject.id %}" class="btn btn-outline-primary btn-sm">
-                        <i class="bi bi-collection"></i> Ngân hàng câu hỏi
+                    <a href="{% url 'forum:question_bank' subject.id %}" class="btn btn-outline-light btn-sm rounded-btn">
+                        <i class="bi bi-collection"></i>
                     </a>
                 </div>
             </div>
@@ -136,7 +138,6 @@
                             <h6 class="fw-bold mb-1">{{ test.title }}</h6>
                             <p class="small text-muted mb-2">{{ test.description|truncatewords:15 }}</p>
                             
-                            <!-- Thông tin bài kiểm tra -->
                             <div class="d-flex flex-wrap gap-2 small mb-2">
                                 {% if test.time_limit %}
                                 <span class="badge bg-info text-dark">
@@ -158,7 +159,6 @@
                                 {% endif %}
                             </div>
 
-                            <!-- Trạng thái bài kiểm tra -->
                             <div class="d-flex align-items-center">
                                 {% if test.is_active %}
                                 <span class="badge bg-success me-2">
@@ -179,16 +179,16 @@
                         
                         <div class="btn-group ms-3 flex-shrink-0">
                             {% if test.is_active %}
-                            <a href="{% url 'forum:take_test' test.id %}" class="btn btn-outline-success btn-sm">
+                            <a href="{% url 'forum:take_test' test.id %}" class="btn btn-outline-success btn-sm rounded-btn">
                                 <i class="bi bi-play-circle"></i> Làm bài
                             </a>
                             {% else %}
-                            <button class="btn btn-outline-secondary btn-sm" disabled>
+                            <button class="btn btn-outline-secondary btn-sm rounded-btn" disabled>
                                 <i class="bi bi-clock-history"></i> Đã hết hạn
                             </button>
                             {% endif %}
                             
-                            <a href="{% url 'forum:test_detail' test.id %}" class="btn btn-outline-primary btn-sm">
+                            <a href="{% url 'forum:test_detail' test.id %}" class="btn btn-outline-primary btn-sm rounded-btn">
                                 <i class="bi bi-eye"></i>
                             </a>
                         </div>
@@ -199,10 +199,10 @@
                     <i class="bi bi-file-earmark-text display-4 text-muted"></i>
                     <p class="text-muted mt-2 small">Chưa có bài kiểm tra nào</p>
                     <div class="d-flex gap-2 justify-content-center">
-                        <a href="{% url 'forum:create_test' subject.id %}" class="btn btn-success btn-sm">
+                        <a href="{% url 'forum:create_test' subject.id %}" class="btn btn-success btn-sm rounded-btn">
                             <i class="bi bi-plus"></i> Tạo bài kiểm tra
                         </a>
-                        <a href="{% url 'forum:create_question' subject.id %}" class="btn btn-primary btn-sm">
+                        <a href="{% url 'forum:create_question' subject.id %}" class="btn btn-primary btn-sm rounded-btn">
                             <i class="bi bi-plus-circle"></i> Thêm câu hỏi
                         </a>
                     </div>
@@ -212,73 +212,50 @@
         </div>
 
         <!-- Quick Actions -->
-        <div class="card shadow-sm">
-            <div class="card-header bg-white py-3">
+        <div class="card shadow-sm mb-4 border-0 rounded-card">
+            <div class="card-header bg-primary text-white rounded-card-header py-3">
                 <h5 class="card-title mb-0">
                     <i class="bi bi-lightning"></i> Hành động nhanh
                 </h5>
             </div>
             <div class="card-body">
                 <div class="d-grid gap-2">
-                    <!-- Viết bài mới -->
-                    <a href="{% url 'forum:create_post' %}?subject_id={{ subject.id }}" 
-                       class="btn btn-outline-primary btn-sm d-flex align-items-center justify-content-center">
+                    <a href="{% url 'forum:create_post' %}?subject_id={{ subject.id %}" 
+                       class="btn btn-outline-primary rounded-btn">
                         <i class="bi bi-pencil me-2"></i> 
                         <span>Viết bài mới</span>
                     </a>
                     
-                    <!-- Tạo bài kiểm tra -->
                     <a href="{% url 'forum:create_test' subject.id %}" 
-                       class="btn btn-outline-success btn-sm d-flex align-items-center justify-content-center">
+                       class="btn btn-outline-success rounded-btn">
                         <i class="bi bi-file-earmark-text me-2"></i>
                         <span>Tạo bài kiểm tra</span>
                     </a>
                     
-                    <!-- Thêm câu hỏi -->
                     <a href="{% url 'forum:create_question' subject.id %}" 
-                       class="btn btn-outline-warning btn-sm d-flex align-items-center justify-content-center">
+                       class="btn btn-outline-warning rounded-btn">
                         <i class="bi bi-plus-circle me-2"></i>
                         <span>Thêm câu hỏi</span>
                     </a>
                     
-                    <!-- Ngân hàng câu hỏi -->
                     <a href="{% url 'forum:question_bank' subject.id %}" 
-                       class="btn btn-outline-info btn-sm d-flex align-items-center justify-content-center">
+                       class="btn btn-outline-info rounded-btn">
                         <i class="bi bi-collection me-2"></i>
                         <span>Ngân hàng câu hỏi</span>
                     </a>
                     
-                    <!-- Chia sẻ diễn đàn -->
-                    <button class="btn btn-outline-secondary btn-sm d-flex align-items-center justify-content-center"
+                    <button class="btn btn-outline-secondary rounded-btn"
                             onclick="shareForum()">
                         <i class="bi bi-share me-2"></i>
                         <span>Chia sẻ diễn đàn</span>
                     </button>
                 </div>
-
-                <!-- Thông báo trạng thái -->
-                <div class="mt-3 p-2 bg-light rounded small">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span class="text-muted">Bài kiểm tra đang mở:</span>
-                        <span class="badge bg-success">
-                            {{ tests|length }} bài
-                        </span>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center mt-1">
-                        <span class="text-muted">Bài viết:</span>
-                        <span class="badge bg-primary">{{ posts|length }}</span>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center mt-1">
-                        <span class="text-muted">Thành viên:</span>
-                        <span class="badge bg-info">{{ user_count }}</span>
-                    </div>
-                </div>
             </div>
         </div>
 
         <!-- Statistics -->
-        <div class="card shadow-sm mt-4">
-            <div class="card-header bg-white py-3">
+        <div class="card shadow-sm border-0 rounded-card">
+            <div class="card-header bg-info text-white rounded-card-header py-3">
                 <h5 class="card-title mb-0">
                     <i class="bi bi-graph-up"></i> Thống kê
                 </h5>
@@ -299,7 +276,7 @@
                     </div>
                     <div class="col-6">
                         <div class="border-end">
-                            <h4 class="fw-bold text-warning mb-1">0</h4>
+                            <h4 class="fw-bold text-warning mb-1">{{ question_count }}</h4>
                             <small class="text-muted">Câu hỏi</small>
                         </div>
                     </div>
@@ -314,8 +291,69 @@
         </div>
     </div>
 </div>
+</div>
 
-<!-- JavaScript cho chia sẻ -->
+{% endblock %}
+
+{% block style %}
+
+<style>
+.pagination {
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    display: inline-flex;
+}
+
+.pagination .page-item:first-child .page-link {
+    border-radius: 10px 0 0 10px !important;
+}
+
+.pagination .page-item:last-child .page-link {
+    border-radius: 0 10px 10px 0 !important;
+}
+
+.pagination .page-link {
+    border-radius: 0 !important;
+    margin: 0 !important;
+    border: 1px solid #dee2e6;
+    border-right: none;
+    padding: 0.5rem 0.75rem;
+    transition: all 0.3s ease;
+}
+
+.pagination .page-item:last-child .page-link {
+    border-right: 1px solid #dee2e6;
+}
+
+.pagination .page-item.active .page-link {
+    background: linear-gradient(135deg, #0d6efd, #0a58ca);
+    border-color: #0d6efd;
+    color: white;
+    z-index: 3;
+}
+
+.pagination .page-link:hover:not(.active .page-link) {
+    background-color: #e9ecef;
+    color: #0d6efd;
+}
+
+.pagination .page-item.disabled .page-link {
+    background-color: #f8f9fa;
+    color: #6c757d;
+    cursor: not-allowed;
+}
+
+/* Remove transform effect on pagination hover */
+.pagination .page-link:hover {
+    transform: none;
+}
+</style>
+
+{% endblock %}
+
+{% block script %}
+
 <script>
 function shareForum() {
     const currentUrl = window.location.href;
@@ -328,74 +366,11 @@ function shareForum() {
         .then(() => console.log('Chia sẻ thành công'))
         .catch((error) => console.log('Lỗi chia sẻ:', error));
     } else {
-        // Fallback cho trình duyệt không hỗ trợ Web Share API
         navigator.clipboard.writeText(currentUrl).then(() => {
             alert('Đã sao chép link diễn đàn vào clipboard!');
         });
     }
 }
 </script>
-
-<style>
-.post-item:hover {
-    background-color: #f8f9fa;
-    transition: background-color 0.2s ease;
-}
-
-.post-item:last-child {
-    border-bottom: none !important;
-}
-
-.card {
-    border: 1px solid #e9ecef;
-    transition: transform 0.2s ease-in-out;
-}
-
-.card:hover {
-    transform: translateY(-2px);
-}
-
-.card-header {
-    border-bottom: 1px solid #e9ecef;
-}
-
-.btn {
-    transition: all 0.3s ease;
-    border-width: 2px;
-}
-
-.btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-}
-
-.btn-outline-primary:hover {
-    background-color: #0d6efd;
-    color: white;
-}
-
-.btn-outline-success:hover {
-    background-color: #198754;
-    color: white;
-}
-
-.btn-outline-warning:hover {
-    background-color: #ffc107;
-    color: black;
-}
-
-.btn-outline-info:hover {
-    background-color: #0dcaf0;
-    color: black;
-}
-
-.badge {
-    font-size: 0.7em;
-}
-
-.flex-shrink-0 {
-    flex-shrink: 0;
-}
-</style>
 
 {% endblock %}

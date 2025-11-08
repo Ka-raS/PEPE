@@ -154,9 +154,15 @@
                 <div class="card-body">
                     <div class="d-grid gap-2">
                         {% if test.is_active %}
+                        {% if current_user_attempts >= test.max_attempts %}
+                        <button class="btn btn-secondary btn-lg" disabled>
+                            <i class="bi bi-x-circle"></i> Đã hết lượt làm bài
+                        </button>
+                        {% else %}
                         <a href="{% url 'forum:take_test' test.id %}" class="btn btn-success btn-lg">
                             <i class="bi bi-play-circle"></i> Bắt đầu làm bài
                         </a>
+                        {% endif %}
                         {% else %}
                         <button class="btn btn-secondary btn-lg" disabled>
                             <i class="bi bi-lock"></i> Bài kiểm tra đã đóng
@@ -167,8 +173,8 @@
                             <i class="bi bi-clock-history"></i> Lịch sử làm bài
                         </a>
                         
-                        <a href="{% url 'forum:add_questions_to_test' test.id %}" class="btn btn-outline-info">
-                            <i class="bi bi-plus-circle"></i> Thêm câu hỏi
+                        <a href="{% url 'forum:add_questions_to_test' test.id %}" class="btn btn-success">
+                            <i class="bi bi-plus-circle"></i> Thêm Câu Hỏi Từ Ngân Hàng
                         </a>
                         
                         <a href="{% url 'forum:subject_detail' test.subject_id %}" class="btn btn-outline-secondary">
@@ -225,7 +231,7 @@
                     <div class="progress mb-2" style="height: 8px;">
                         <div class="progress-bar" role="progressbar" style="width: 0%"></div>
                     </div>
-                    <small class="text-muted">0/{{ test.max_attempts }} lần đã sử dụng</small>
+                    <small class="text-muted">{{ current_user_attempts }}/{{ test.max_attempts }} lần đã sử dụng</small>
                     
                     <hr>
                     
@@ -241,6 +247,10 @@
     </div>
 </div>
 
+
+{% endblock %}
+
+{% block style %}
 <style>
 .card {
     border: none;
@@ -310,59 +320,49 @@
 }
 </style>
 
+{% endblock %}
+
+{% block script %}
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Cập nhật thông tin tiến độ (có thể tích hợp với API thực tế sau)
-    function updateProgress() {
-        // Ở đây có thể gọi API để lấy số lần đã làm bài
-        // Tạm thời để mặc định là 0
-        const attempted = 0;
-        const maxAttempts = {{ test.max_attempts }};
-        const progressPercent = (attempted / maxAttempts) * 100;
-        
-        document.querySelector('.progress-bar').style.width = `${progressPercent}%`;
-        document.querySelector('.display-6').textContent = attempted;
-        document.querySelector('.progress-bar').textContent = `${attempted}/${maxAttempts}`;
-    };
-    
-    updateProgress();
-    
-    // Thêm hiệu ứng cho các button
-    const buttons = document.querySelectorAll('.btn');
-    buttons.forEach(button => {
-        button.addEventListener('mouseenter', function() {
-            if (!this.disabled) {
-                this.style.transform = 'translateY(-2px)';
-            }
+    // Xử lý nút bắt đầu làm bài
+    const startTestBtn = document.getElementById('startTestBtn');
+    if (startTestBtn) {
+        startTestBtn.addEventListener('click', function() {
+            window.location.href = "{% url 'forum:take_test' test.id %}";
         });
-        
-        button.addEventListener('mouseleave', function() {
-            this.style.transform = 'translateY(0)';
-        });
-    });
-    
-    // Hiển thị thông báo nếu bài kiểm tra sắp hết hạn
-    {% if test.due_date %}
-    const dueDate = new Date('{{ test.due_date|date:"c" }}');
-    const now = new Date();
-    const timeDiff = dueDate - now;
-    const daysDiff = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
-    
-    if (daysDiff <= 3 && daysDiff > 0) {
-        // Tạo thông báo cảnh báo
-        const warningAlert = document.createElement('div');
-        warningAlert.className = 'alert alert-warning alert-dismissible fade show';
-        warningAlert.innerHTML = `
-            <i class="bi bi-exclamation-triangle"></i>
-            <strong>Cảnh báo:</strong> Bài kiểm tra này sẽ hết hạn trong ${daysDiff} ngày nữa.
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
-        
-        // Chèn thông báo vào đầu card body
-        const cardBody = document.querySelector('.card-body');
-        cardBody.insertBefore(warningAlert, cardBody.firstChild);
     }
-    {% endif %}
+
+    // Xử lý countdown timer nếu có
+    const dueDateElement = document.getElementById('dueDateCountdown');
+    if (dueDateElement) {
+        const dueDate = new Date(dueDateElement.dataset.dueDate);
+        const now = new Date();
+        
+        if (dueDate > now) {
+            const diff = dueDate - now;
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            
+            dueDateElement.textContent = 'Còn ' + days + ' ngày ' + hours + ' giờ';
+        } else {
+            dueDateElement.textContent = 'Đã hết hạn';
+            dueDateElement.classList.add('text-danger');
+        }
+    }
+
+    // Chỉ ẩn alert thông báo (messages từ Django), KHÔNG ẩn alert thông tin
+    const messageAlerts = document.querySelectorAll('.alert.alert-dismissible');
+    messageAlerts.forEach(function(alert) {
+        setTimeout(function() {
+            alert.style.opacity = '0';
+            setTimeout(function() {
+                alert.remove();
+            }, 1000);
+        }, 5000);
+    });
 });
 </script>
+
 {% endblock %}

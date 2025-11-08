@@ -52,7 +52,58 @@
                             </ul>
                         </div>
                     </div>
-
+                    <div class="card mt-4">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-check-circle"></i> Kết Quả Chấm Điểm Tự Động
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center">
+                                <div class="col-md-4">
+                                    <div class="display-4 fw-bold text-primary">
+                                        {{ submission.total_score|default:0 }}
+                                    </div>
+                                    <div class="text-muted">Điểm đạt được</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="display-4 fw-bold text-dark">
+                                        {{ answers|length }}
+                                    </div>
+                                    <div class="text-muted">Tổng số câu</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="display-4 fw-bold text-info">
+                                        {% widthratio submission.total_score answers|length 100 %}%
+                                    </div>
+                                    <div class="text-muted">Tỷ lệ đúng</div>
+                                </div>
+                            </div>
+                            
+                            <hr>
+                            
+                            <!-- Chi tiết từng câu hỏi -->
+                            <h6>Chi tiết câu trả lời:</h6>
+                            {% for answer in answers %}
+                            <div class="card mb-2 {% if answer.score == 1 %}border-success{% else %}border-danger{% endif %}">
+                                <div class="card-body py-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>Câu {{ forloop.counter }}:</strong>
+                                            {{ answer.question_content|truncatewords:10 }}
+                                        </div>
+                                        <div>
+                                            <span class="badge {% if answer.score == 1 %}bg-success{% else %}bg-danger{% endif %}">
+                                                {% if answer.score == 1 %}Đúng{% else %}Sai{% endif %}
+                                            </span>
+                                            <span class="ms-2">Điểm: {{ answer.score }}/1</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
                     <!-- Danh sách câu trả lời -->
                     <h5 class="mb-3">Câu Trả Lời</h5>
                     {% for answer in answers %}

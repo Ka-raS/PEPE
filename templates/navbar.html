@@ -1,33 +1,31 @@
-<nav class="navbar navbar-expand-lg bg-custom-secondary py-0" data-bs-theme="dark">
+<nav class="navbar navbar-expand-lg bg-custom-secondary py-0 rounded-navbar" data-bs-theme="dark">
   <div class="container">
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+    <button class="navbar-toggler rounded-btn" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
       <span class="navbar-toggler-icon"></span>
     </button>
     <div class="collapse navbar-collapse" id="navbarNav">
       <!-- Menu bên trái -->
       <ul class="navbar-nav me-auto">
         <li class="nav-item">
-          <a class="nav-link {% if request.resolver_match.app_name == 'home' %}active{% endif %}" href="{% url 'home:index' %}">
+          <a class="nav-link rounded-nav-link {% if request.resolver_match.app_name == 'home' %}active{% endif %}" href="{% url 'home:index' %}">
             <i class="bi bi-house-door me-1"></i>Trang chủ
           </a>
         </li>
         <li class="nav-item">
-          <a class="nav-link {% if request.resolver_match.app_name == 'forum' %}active{% endif %}" href="{% url 'forum:index' %}">
+          <a class="nav-link rounded-nav-link {% if request.resolver_match.app_name == 'forum' %}active{% endif %}" href="{% url 'forum:index' %}">
             <i class="bi bi-chat-dots me-1"></i>Diễn đàn
           </a>
         </li>
       
         <li class="nav-item">
-          <a class="nav-link {% if request.resolver_match.app_name == 'accounts' %}active{% endif %}" href="{% url 'accounts:index' %}">
+          <a class="nav-link rounded-nav-link {% if request.resolver_match.app_name == 'accounts' %}active{% endif %}" href="{% url 'accounts:index' %}">
             <i class="bi bi-people me-1"></i>Hồ sơ
           </a>
         </li>
       </ul>
 
-      <!-- TODO: Search bar ở giữa -->
       <form class="d-flex mx-3" role="search" method="GET" action="#">
-        <input class="form-control form-control-sm" type="search" name="q" placeholder="Tìm kiếm..." aria-label="Search">
-        <button class="btn btn-outline-light btn-sm ms-2" type="submit">Tìm</button>
+        <input class="form-control form-control-sm rounded-search" type="search" name="q" placeholder="Tìm kiếm..." aria-label="Search">
       </form>
     </div>
   </div>

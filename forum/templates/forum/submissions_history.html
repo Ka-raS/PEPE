@@ -32,7 +32,6 @@
                             <th>Thời gian nộp</th>
                             <th>Thời gian làm</th>
                             <th>Điểm số</th>
-                            <th>Trạng thái</th>
                             <th>Hành động</th>
                         </tr>
                     </thead>
@@ -40,22 +39,15 @@
                         {% for submission in submissions %}
                         <tr>
                             <td>{{ forloop.counter }}</td>
-                            <td>{{ submission.submitted_at }}</td>
+                            <td>{{ submission.submitted_at|date:"d/m/Y H:i" }}</td>
                             <td>{{ submission.time_spent }} phút</td>
                             <td>
                                 {% if submission.total_score is not None %}
-                                <span class="badge {% if submission.total_score >= 8 %}bg-success{% elif submission.total_score >= 5 %}bg-warning{% else %}bg-danger{% endif %}">
-                                    {{ submission.total_score }}
+                                <span class="badge bg-success">
+                                    {{ submission.total_score }} điểm
                                 </span>
                                 {% else %}
                                 <span class="badge bg-secondary">Chờ chấm</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if submission.total_score is not None %}
-                                <span class="badge bg-success">Đã chấm</span>
-                                {% else %}
-                                <span class="badge bg-warning">Chờ chấm</span>
                                 {% endif %}
                             </td>
                             <td>

@@ -4,15 +4,13 @@
 
 {% block main %}
 
-<div class="container">
+<div class="container mt-4">
   <div class="row g-4">
     <div class="col-lg-8">
-      {% if is_authenticated %}
-      <h4 class="mb-3">Chào mừng trở lại, {{ full_name|default:username }}!</h4>
-      {% endif %}
       
-      <div class="card shadow-sm mb-4">
-        <div class="card-header bg-primary text-white">
+      <!-- Gợi ý cho bạn -->
+      <div class="card shadow-sm mb-4 border-0 rounded-card">
+        <div class="card-header bg-primary text-white rounded-card-header">
           <h5 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Gợi ý cho bạn</h5>
         </div>
         <div class="card-body">
@@ -24,15 +22,14 @@
             {% endif %}
           </p>
           <div class="list-group">
-            {% for doc in suggested_items %}
-            <a href="{% url 'document:document_detail' doc.id %}" class="list-group-item list-group-item-action" target="_blank">
+            {% for post in suggested_posts %}
+            <a href="{% url 'forum:post_detail' post.id %}" class="list-group-item list-group-item-action border-0 rounded-list-item">
               <div class="d-flex w-100 justify-content-between">
-                <h6 class="mb-1"><i class="bi bi-file-earmark-text me-1"></i>{{ doc.title }}</h6>
-                <small class="text-muted">{{ doc.uploaded_at|timesince }} trước</small>
+                <h6 class="mb-1"><i class="bi bi-file-earmark-text me-1"></i>{{ post.title }}</h6>
+                <small class="text-muted">{{ post.updated_at }}</small>
               </div>
-              <p class="mb-1 small">{{ doc.description|truncatewords:20 }}</p>
-              {% if doc.major %}<span class="badge bg-primary">{{ doc.major }}</span>{% endif %}
-              {% if doc.subject %}<span class="badge bg-secondary">{{ doc.subject }}</span>{% endif %}
+              <p class="mb-1 small">{{ post.content|truncatewords:20 }}</p>
+              {% if post.subject %}<span class="badge bg-secondary">{{ post.subject }}</span>{% endif %}
             </a>
             {% empty %}
             <p class="text-center text-muted p-3">Chưa có tài liệu nào phù hợp.</p>
@@ -41,61 +38,110 @@
         </div>
       </div>
 
-      <div class="card shadow-sm mb-4">
-        <div class="card-header bg-warning text-dark">
+      <!-- Bài đăng nổi bật -->
+      <div class="card shadow-sm mb-4 border-0 rounded-card">
+        <div class="card-header bg-warning text-dark rounded-card-header">
           <h5 class="mb-0"><i class="bi bi-star-fill me-2"></i>Bài đăng nổi bật</h5>
         </div>
         <ul class="list-group list-group-flush">
-          <li class="list-group-item p-3 d-flex align-items-start">
-            <img src="https://placehold.co/40x40" class="rounded-circle me-3" alt="avatar">
+          {% for post in popular_posts %}
+          <li class="list-group-item p-3 d-flex align-items-start border-0">
+            {% if post.author_avatar_path %}
+              <img src="{{ post.author_avatar_path }}" class="rounded-circle me-3" alt="avatar" style="width: 40px; height: 40px; object-fit: cover;">
+            {% else %}
+              <div class="bg-secondary text-white rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+              <i class="bi bi-person-fill"></i>
+              </div>
+            {% endif %}
+
             <div class="flex-grow-1">
-              <a href="#" class="text-decoration-none fw-bold text-dark">Chia sẻ kinh nghiệm qua môn Giải tích 1 với điểm A?</a>
-              <div class="small text-muted mt-1">bởi <a href="#">tranvanb</a> • 2 giờ trước • trong <a href="#">Góc học tập</a></div>
+              <a href="{% url 'forum:post_detail' post.id %}" class="text-decoration-none fw-bold text-dark">{{ post.title }}</a>
+              <div class="small text-muted mt-1">
+                bởi {{ post.username }} • {{ post.created_at }} • trong <span class="badge bg-secondary">{{ post.subject_name }}</span>
+              </div>
             </div>
             <div class="text-end small text-muted ms-3">
-              <div><i class="bi bi-reply-fill me-1"></i>15 trả lời</div>
-              <div><i class="bi bi-hand-thumbs-up-fill me-1"></i>50 lượt thích</div>
+              <div><i class="bi bi-chat-dots-fill me-1"></i>{{ post.comment_count }}</div>
+              <div><i class="bi bi-hand-thumbs-up-fill me-1"></i>{{ post.vote_value }}</div>
             </div>
           </li>
-          <li class="list-group-item p-3 d-flex align-items-start">
-            <img src="https://placehold.co/40x40" class="rounded-circle me-3" alt="avatar">
-            <div class="flex-grow-1">
-              <a href="#" class="text-decoration-none fw-bold text-dark">[Hỏi] Nên chọn chuyên ngành nào trong khoa CNTT?</a>
-              <div class="small text-muted mt-1">bởi <a href="#">lethic</a> • 1 ngày trước • trong <a href="#">Định hướng nghề nghiệp</a></div>
-            </div>
-            <div class="text-end small text-muted ms-3">
-              <div><i class="bi bi-reply-fill me-1"></i>32 trả lời</div>
-              <div><i class="bi bi-hand-thumbs-up-fill me-1"></i>120 lượt thích</div>
-            </div>
-          </li>
+          {% empty %}
+          <li class="list-group-item p-3 text-center text-muted">Chưa có bài đăng nổi bật.</li>
+          {% endfor %}
         </ul>
       </div>
 
-      <div class="card shadow-sm">
-        <div class="card-header bg-info text-white">
+      <!-- Bài đăng mới nhất -->
+      <div class="card shadow-sm mb-4 border-0 rounded-card">
+        <div class="card-header bg-info text-white rounded-card-header">
           <h5 class="mb-0"><i class="bi bi-newspaper me-2"></i>Bài đăng mới nhất</h5>
         </div>
         <ul class="list-group list-group-flush">
-          <li class="list-group-item p-3 d-flex align-items-start">
-            <img src="https://placehold.co/40x40" class="rounded-circle me-3" alt="avatar">
+          {% for post in latest_posts %}
+          <li class="list-group-item p-3 d-flex align-items-start border-0">
+            {% if post.author_avatar_path %}
+              <img src="{{ post.author_avatar_path }}" class="rounded-circle me-3" alt="avatar" style="width: 40px; height: 40px; object-fit: cover;">
+            {% else %}
+              <div class="bg-secondary text-white rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+              <i class="bi bi-person-fill"></i>
+              </div>
+            {% endif %}
+
             <div class="flex-grow-1">
-              <a href="#" class="text-decoration-none fw-bold text-dark">Tìm nhóm làm đồ án môn Mạng máy tính</a>
-              <div class="small text-muted mt-1">bởi <a href="#">nguyenvana</a> • 5 phút trước • trong <a href="#">Tìm bạn học</a></div>
+              <a href="{% url 'forum:post_detail' post.id %}" class="text-decoration-none fw-bold text-dark">{{ post.title }}</a>
+              <div class="small text-muted mt-1">
+                bởi {{ post.username }} • {{ post.created_at }} • trong <span class="badge bg-secondary">{{ post.subject_name }}</span>
+              </div>
             </div>
             <div class="text-end small text-muted ms-3">
-              <div><i class="bi bi-reply-fill me-1"></i>0 trả lời</div>
+              <div><i class="bi bi-chat-dots-fill me-1"></i>{{ post.comment_count }}</div>
+              <div><i class="bi bi-hand-thumbs-up-fill me-1"></i>{{ post.vote_value }}</div>
             </div>
           </li>
-          <li class="list-group-item p-3 d-flex align-items-start">
-            <img src="https://placehold.co/40x40" class="rounded-circle me-3" alt="avatar">
+          {% empty %}
+          <li class="list-group-item p-3 text-center text-muted">Chưa có bài đăng nổi bật.</li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <!-- Bài kiểm tra mới nhất -->
+      <div class="card shadow-sm border-0 rounded-card">
+        <div class="card-header bg-success text-white rounded-card-header">
+          <h5 class="mb-0"><i class="bi bi-clipboard-check me-2"></i>Bài kiểm tra mới nhất</h5>
+        </div>
+        <ul class="list-group list-group-flush">
+          {% for test in latest_tests %}
+          <li class="list-group-item p-3 d-flex justify-content-between align-items-start border-0">
+            {% if test.author_avatar_path %}
+              <img src="{{ test.author_avatar_path }}" class="rounded-circle me-3" alt="avatar" style="width: 40px; height: 40px; object-fit: cover;">
+            {% else %}
+              <div class="bg-secondary text-white rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+              <i class="bi bi-person-fill"></i>
+              </div>
+            {% endif %}
+
             <div class="flex-grow-1">
-              <a href="#" class="text-decoration-none fw-bold text-dark">Tài liệu ôn thi HĐH cần gấp!!!</a>
-              <div class="small text-muted mt-1">bởi <a href="#">hoangthid</a> • 15 phút trước • trong <a href="#">Xin tài liệu</a></div>
+              <a href="{% url 'forum:test_detail' test.id %}" class="text-decoration-none fw-bold text-dark">
+                <i class="bi bi-pencil-square me-1"></i>{{ test.title }}
+              </a>
+              {% if test.description %}<p class="mb-1 small text-muted">{{ test.description|truncatewords:15 }}</p>{% endif %}
+              <div class="small text-muted mt-2">
+                <span class="badge bg-secondary">{{ test.subject }}</span>
+                <span class="ms-2"><i class="bi bi-person me-1"></i>{{ test.teacher }}</span>
+                {% if test.duration %}<span class="ms-2"><i class="bi bi-clock me-1"></i>{{ test.duration }} phút</span>{% endif %}
+                <span class="ms-2"><i class="bi bi-question-circle me-1"></i>{{ test.question_count }} câu hỏi</span>
+              </div>
+              {% if test.due_date %}
+              <div class="small text-danger mt-1">
+                <i class="bi bi-calendar-event me-1"></i>Hạn: {{ test.due_date }}
+              </div>
+              {% endif %}
             </div>
-            <div class="text-end small text-muted ms-3">
-              <div><i class="bi bi-reply-fill me-1"></i>2 trả lời</div>
-            </div>
+            <small class="text-muted ms-3">{{ test.created_at }}</small>
           </li>
+          {% empty %}
+          <li class="list-group-item p-3 text-center text-muted">Chưa có bài kiểm tra nào.</li>
+          {% endfor %}
         </ul>
       </div>
     </div>
@@ -105,21 +151,23 @@
         <div class="d-grid gap-4">
         
           <!-- Quick Actions -->
-          <div class="card shadow-sm border-0">
-            <div class="card-header bg-primary text-white">
+          <div class="card shadow-sm border-0 rounded-card">
+            <div class="card-header bg-primary text-white rounded-card-header">
               <h5 class="card-title mb-0">
                 <i class="bi bi-lightning"></i> Hành động nhanh
               </h5>
             </div>
-          <div class="card-body">
-          <div class="d-grid gap-2">
-            <a href="{% url 'forum:create_post' %}?subject_id={{ post.subject.id }}" class="btn btn-outline-primary">
-              <i class="bi bi-pencil"></i> Viết bài mới
-            </a>
-            <a href="{% url 'forum:index' %}" class="btn btn-outline-info">
-              <i class="bi bi-chat-dots me-1"></i> Diễn đàn
-            </a>
-          </div>                
+            <div class="card-body">
+              <div class="d-grid gap-2">
+                <a href="{% url 'forum:create_post' %}" class="btn btn-outline-primary rounded-btn">
+                  <i class="bi bi-pencil"></i> Viết bài mới
+                </a>
+                <a href="{% url 'forum:index' %}" class="btn btn-outline-info rounded-btn">
+                  <i class="bi bi-chat-dots me-1"></i> Diễn đàn
+                </a>
+              </div>                
+            </div>
+          </div>
         </div>
       </div>
     </div>

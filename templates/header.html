@@ -10,17 +10,17 @@
       <div class="d-flex align-items-center gap-2" id="authSection">
         {% if is_authenticated %}
           <div class="dropdown">
-            <a href="{% url 'accounts:index' %}" class="btn btn-outline-light btn-sm">
+            <a href="{% url 'accounts:index' %}" class="btn btn-outline-light btn-sm rounded-btn">
               <i class="bi bi-person-circle me-1"></i>{{ username }}
             </a>
-            <a href="{% url 'accounts:logout' %}" class="btn btn-outline-danger btn-sm" title="Đăng xuất"
+            <a href="{% url 'accounts:logout' %}" class="btn btn-outline-danger btn-sm rounded-btn" title="Đăng xuất"
               onclick="return confirm('Bạn có chắc chắn muốn đăng xuất không?');">
               <i class="bi bi-box-arrow-right"></i>
             </a>
           </div>
         {% else %}
-          <a href="{% url 'accounts:login' %}" class="btn btn-outline-light btn-sm">Đăng nhập</a>
-          <a href="{% url 'accounts:register' %}" class="btn btn-primary btn-sm">Đăng ký</a>
+          <a href="{% url 'accounts:login' %}" class="btn btn-outline-light btn-sm rounded-btn">Đăng nhập</a>
+          <a href="{% url 'accounts:register' %}" class="btn btn-primary btn-sm rounded-btn">Đăng ký</a>
         {% endif %}
       </div>
     </div>

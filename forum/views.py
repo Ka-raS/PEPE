@@ -1,19 +1,13 @@
-from datetime import datetime
-from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
-from django.utils import timezone
-from django.contrib import messages
-from .forms import PostForm  
-from django.forms import formset_factory
 
 import os
 import uuid
 import json
+from datetime import datetime
+
 from django.conf import settings
+from django.contrib import messages
 from django.db import connection
 from django.http import Http404
-from django.utils import timezone
 from django.shortcuts import render, redirect
 from django.core.files.storage import default_storage
 
@@ -123,6 +117,8 @@ def subject_detail(request, subject_id):
 
         cursor.execute("SELECT COUNT(*) FROM users")
         user_count = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM questions")
+        question_count = cursor.fetchone()[0]
     
     context = {
         'is_authenticated': request.session.get('user_id') is not None,
@@ -130,7 +126,8 @@ def subject_detail(request, subject_id):
         'subject': subject,
         'posts': posts,
         'tests': tests,
-        'user_count': user_count
+        'user_count': user_count,
+        'question_count': question_count
     }
     return render(request, 'forum/subject_detail.html', context)
 
@@ -152,6 +149,8 @@ def create_post(request):
     
     if request.method != 'POST':
         context = {
+            'is_authenticated': True,
+            'username': request.session.get('username'),
             'subjects': subjects,
             'title': 'Tạo bài viết mới',
             'selected_subject_id': int(subject_id) if subject_id else None
@@ -187,6 +186,8 @@ def create_post(request):
         for error in errors:
             messages.error(request, error)
         context = {
+            'is_authenticated': True,
+            'username': request.session.get('username'),
             'subjects': subjects,
             'title': 'Tạo bài viết mới',
             'selected_subject_id': int(subject_id) if subject_id else None,
@@ -207,6 +208,8 @@ def create_post(request):
         if file_ext not in allowed_extensions:
             messages.error(request, 'Định dạng file không hợp lệ')
             context = {
+                'is_authenticated': True,
+                'username': request.session.get('username'),
                 'subjects': subjects,
                 'title': 'Tạo bài viết mới',
                 'selected_subject_id': int(subject_id) if subject_id else None,
@@ -222,6 +225,8 @@ def create_post(request):
         if attachment.size > 25 * 1024 * 1024:
             messages.error(request, 'File quá lớn (tối đa 25MB)')
             context = {
+                'is_authenticated': True,
+                'username': request.session.get('username'),
                 'subjects': subjects,
                 'title': 'Tạo bài viết mới',
                 'selected_subject_id': int(subject_id) if subject_id else None,
@@ -268,6 +273,8 @@ def create_post(request):
         
         messages.error(request, f'Có lỗi xảy ra: {str(e)}')
         context = {
+            'is_authenticated': True,
+            'username': request.session.get('username'),
             'subjects': subjects,
             'title': 'Tạo bài viết mới',
             'selected_subject_id': int(subject_id) if subject_id else None,
@@ -470,31 +477,16 @@ def post_detail(request, post_id):
         # Lấy thông tin bài viết với comment_count và vote_value
         cursor.execute("""
             SELECT 
-                p.id, 
-                p.title, 
-                p.content,
-                p.view_count,
-                p.created_at,
-                p.updated_at,
-                p.attachment_path,
-                p.subject_id,
-                s.name as subject_name,
-                p.author_id,
-                u.username,
-                u.first_name,
-                u.last_name,
-                u.avatar_path,
-                COUNT(DISTINCT c.id) as comment_count,
-                COALESCE(SUM(v.vote_value), 0) as vote_value
+                p.id, p.title, p.content, p.view_count,
+                p.created_at, p.updated_at, p.attachment_path,
+                p.subject_id, s.name as subject_name,
+                p.author_id, u.username, u.first_name, u.last_name, u.avatar_path,
+                (SELECT COUNT(*) FROM comments WHERE post_id = p.id) as comment_count,
+                (SELECT COALESCE(SUM(vote_value), 0) FROM votes WHERE post_id = p.id) as vote_value
             FROM posts p
-            LEFT JOIN subjects s ON p.subject_id = s.id
-            LEFT JOIN users u ON p.author_id = u.id
-            LEFT JOIN comments c ON p.id = c.post_id
-            LEFT JOIN votes v ON p.id = v.post_id
+            JOIN subjects s ON p.subject_id = s.id
+            JOIN users u ON p.author_id = u.id
             WHERE p.id = %s
-            GROUP BY p.id, p.title, p.content, p.view_count, p.created_at, 
-                     p.attachment_path, p.subject_id, s.name, p.author_id, 
-                     u.username, u.first_name, u.last_name, u.avatar_path
         """, [post_id])
         
         row = cursor.fetchone()
@@ -638,6 +630,8 @@ def post_detail(request, post_id):
         author_post_count = cursor.fetchone()[0]
         
     context = {
+        'is_authenticated': request.session.get('user_id') is not None,
+        'username': request.session.get('username'),
         'post': post,
         'comments': comments,
         'related_posts': related_posts,
@@ -786,18 +780,25 @@ def vote_post(request, post_id):
     
     
     return redirect('forum:post_detail', post_id=post_id)
+
+
+
+
 def create_test(request, subject_id):
-    """Tạo mới bài kiểm tra"""
+    """Tạo mới bài kiểm tra với câu hỏi"""
     if not request.session.get('user_id'):
         messages.warning(request, 'Vui lòng đăng nhập để tiếp tục')
         return redirect('accounts:login')
     
+    user_id = request.session['user_id']
+
     if request.method == 'POST':
         title = request.POST.get('title')
         description = request.POST.get('description', '')
         time_limit = int(request.POST.get('time_limit', '0'))
         due_date_str = request.POST.get('due_date', '')
         max_attempts = int(request.POST.get('max_attempts', '1'))
+        selected_questions = request.POST.getlist('selected_questions')
         
         due_date = None
         if due_date_str:
@@ -808,17 +809,56 @@ def create_test(request, subject_id):
                 return redirect('forum:create_test', subject_id=subject_id)
         
         with connection.cursor() as cursor:
+            # Tạo bài kiểm tra với author_id
             cursor.execute("""
-                INSERT INTO tests (title, description, time_limit, due_date, max_attempts, subject_id)
-                VALUES (%s, %s, %s, %s, %s, %s)
-            """, [title, description, time_limit, due_date, max_attempts, subject_id])
+                INSERT INTO tests (title, description, time_limit, due_date, max_attempts, subject_id, author_id)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, [title, description, time_limit, due_date, max_attempts, subject_id, user_id])
+            
+            test_id = cursor.lastrowid
+            
+            # Xử lý các câu hỏi đã chọn
+            for i, question_data in enumerate(selected_questions):
+                try:
+                    question = json.loads(question_data)
+                    
+                    if question['source'] == 'new':
+                        cursor.execute("""
+                            INSERT INTO questions (question_type, content, explanation, subject_id, author_id)
+                            VALUES (%s, %s, %s, %s, %s)
+                        """, [question['type'], question['content'], question.get('explanation', ''), subject_id, user_id])
+                        
+                        question_id = cursor.lastrowid
+                        
+                        if question['type'] == 'multiple_choice':
+                            cursor.execute("""
+                                INSERT INTO multiple_choice_questions (id, options, correct_answers)
+                                VALUES (%s, %s, %s)
+                            """, [question_id, json.dumps(question.get('options', {})), json.dumps(question.get('correct_answers', []))])
+                        elif question['type'] == 'essay':
+                            cursor.execute("""
+                                INSERT INTO essay_questions (id, word_limit)
+                                VALUES (%s, %s)
+                            """, [question_id, question.get('word_limit', 0)])
+                    else:
+                        question_id = question['id']
+                    
+                    cursor.execute("""
+                        INSERT INTO test_questions (test_id, question_id, question_order)
+                        VALUES (%s, %s, %s)
+                    """, [test_id, question_id, i])
+                    
+                except Exception as e:
+                    messages.warning(request, f'Có lỗi khi thêm câu hỏi: {str(e)}')
+                    continue
         
         messages.success(request, 'Tạo bài kiểm tra thành công')
-        return redirect('forum:subject_detail', subject_id=subject_id)
+        return redirect('forum:test_detail', test_id=test_id)
+    
     context = {
         'subject_id': subject_id,
         'username': request.session.get('username'),
-        'is_authenticated': request.session.get('user_id') is not None,
+        'is_authenticated': True,
     }
     return render(request, 'forum/create_test.html', context)
 
@@ -828,21 +868,11 @@ def test_detail(request, test_id):
         messages.warning(request, 'Vui lòng đăng nhập để tiếp tục')
         return redirect('accounts:login')
     
-    if not test_id:
-        raise Http404("Bài kiểm tra không tồn tại")
-    
-    # Lấy thông tin bài kiểm tra
     with connection.cursor() as cursor:
         cursor.execute("""
             SELECT 
-                id, 
-                title, 
-                description,  -- ĐỔI TỪ content THÀNH description
-                time_limit, 
-                due_date, 
-                created_at,
-                max_attempts,
-                subject_id,
+                id, title, description, time_limit, due_date, created_at,
+                max_attempts, subject_id,
                 CASE 
                     WHEN due_date IS NULL THEN 1
                     WHEN datetime(due_date) > datetime('now') THEN 1
@@ -859,7 +889,7 @@ def test_detail(request, test_id):
         test = {
             'id': row[0],
             'title': row[1],
-            'description': row[2],  # ĐỔI TỪ content THÀNH description
+            'description': row[2],
             'time_limit': row[3],
             'due_date': row[4],
             'created_at': row[5],
@@ -868,17 +898,32 @@ def test_detail(request, test_id):
             'is_active': row[8]
         }
     
+        user_id = request.session.get('user_id')
+        if user_id:
+            cursor.execute("""
+                SELECT COUNT(*) FROM submissions 
+                WHERE test_id = %s AND author_id = %s
+            """, [test_id, user_id])
+            current_user_attempts = cursor.fetchone()[0]
+        else:
+            current_user_attempts = 0
+
     context = {
         'test': test,
+        'current_user_attempts': current_user_attempts,
+        'is_authenticated': True,
+        'username': request.session.get('username'),
     }
     return render(request, 'forum/test_detail.html', context)
 
 def create_question(request, subject_id):
-    """Tạo câu hỏi mới (multiple choice hoặc essay)"""
+    """Tạo câu hỏi mới"""
     if not request.session.get('user_id'):
         messages.warning(request, 'Vui lòng đăng nhập để tiếp tục')
         return redirect('accounts:login')
     
+    user_id = request.session['user_id']
+
     if request.method == 'POST':
         question_type = request.POST.get('question_type')
         content = request.POST.get('content')
@@ -891,31 +936,33 @@ def create_question(request, subject_id):
         
         attachment_path = None
         if attachment:
-            attachment_path = default_storage.save(f'questions/{datetime.now().strftime("%Y/%m/%d")}/{attachment.name}', attachment)
+            attachment_path = default_storage.save(
+                f'questions/{datetime.now().strftime("%Y/%m/%d")}/{attachment.name}', 
+                attachment
+            )
         
         with connection.cursor() as cursor:
             cursor.execute("""
-                INSERT INTO questions (question_type, content, explanation, attachment_path, subject_id)
-                VALUES (%s, %s, %s, %s, %s)
-            """, [question_type, content, explanation, attachment_path, subject_id])
+                INSERT INTO questions (question_type, content, explanation, attachment_path, subject_id, author_id)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, [question_type, content, explanation, attachment_path, subject_id, user_id])
             question_id = cursor.lastrowid
             
-            # Xử lý theo loại câu hỏi
             if question_type == 'multiple_choice':
-                options_json = request.POST.get('options', '{}')
-                try:
-                    # Validate JSON
-                    json.loads(options_json)
-                except json.JSONDecodeError:
-                    options_json = '{}'
+                options = {}
+                for key in ['A', 'B', 'C', 'D']:
+                    option_value = request.POST.get(f'option_{key}', '').strip()
+                    if option_value:
+                        options[key] = option_value
                 
                 allow_multiple = 1 if request.POST.get('allow_multiple') else 0
+                correct_answers = request.POST.getlist('correct_answers_multiple') if allow_multiple else [request.POST.get('correct_answer')]
                 randomize_options = 1 if request.POST.get('randomize_options') else 0
                 
                 cursor.execute("""
-                    INSERT INTO multiple_choice_questions (id, options, allow_multiple, randomize_options)
-                    VALUES (%s, %s, %s, %s)
-                """, [question_id, options_json, allow_multiple, randomize_options])
+                    INSERT INTO multiple_choice_questions (id, options, correct_answers, allow_multiple, randomize_options)
+                    VALUES (%s, %s, %s, %s, %s)
+                """, [question_id, json.dumps(options), json.dumps(correct_answers), allow_multiple, randomize_options])
                 
             elif question_type == 'essay':
                 word_limit = request.POST.get('word_limit', 0)
@@ -926,15 +973,190 @@ def create_question(request, subject_id):
         
         messages.success(request, 'Tạo câu hỏi thành công')
         return redirect('forum:question_bank', subject_id=subject_id)
+    
     context = {
         'subject_id': subject_id,
+        'is_authenticated': True,
         'username': request.session.get('username'),
-        'is_authenticated': request.session.get('user_id') is not None,
     }
     return render(request, 'forum/create_question.html', context)
 
+def take_test(request, test_id):
+    """Làm bài kiểm tra trực tuyến"""
+    if not request.session.get('user_id'):
+        messages.warning(request, 'Vui lòng đăng nhập để tiếp tục')
+        return redirect('accounts:login')
+    
+    user_id = request.session['user_id']
+    
+    try:
+        with connection.cursor() as cursor:
+            # Kiểm tra test
+            cursor.execute("SELECT id, title, time_limit, max_attempts FROM tests WHERE id = %s", [test_id])
+            test_row = cursor.fetchone()
+            
+            if not test_row:
+                messages.error(request, 'Bài kiểm tra không tồn tại')
+                return redirect('forum:index')
+            
+            test_info = {
+                'id': test_row[0],
+                'title': test_row[1],
+                'time_limit': test_row[2] or 60,
+                'max_attempts': test_row[3] or 1
+            }
+            
+            # Kiểm tra số lần nộp
+            cursor.execute("""
+                SELECT COUNT(*) FROM submissions 
+                WHERE test_id = %s AND author_id = %s
+            """, [test_id, user_id])
+            attempt_count = cursor.fetchone()[0]
+            
+            if attempt_count >= test_info['max_attempts']:
+                messages.error(request, 'Bạn đã vượt quá số lần nộp bài cho phép')
+                return redirect('forum:test_detail', test_id=test_id)
+        
+        # POST - Nộp bài
+        if request.method == 'POST':
+            return handle_test_submission(request, test_id, user_id, attempt_count)
+        
+        # GET - Hiển thị bài kiểm tra
+        return display_test(request, test_id, user_id, attempt_count, test_info)
+    
+    except Exception as e:
+        print(f"ERROR in take_test: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        messages.error(request, f'Có lỗi xảy ra: {str(e)}')
+        return redirect('forum:index')
+
+def handle_test_submission(request, test_id, user_id, attempt_count):
+    """Xử lý nộp bài - chấm tự động trắc nghiệm"""
+    try:
+        with connection.cursor() as cursor:
+            # Tạo submission
+            cursor.execute("""
+                INSERT INTO submissions (test_id, author_id, attempt_number, time_spent)
+                VALUES (%s, %s, %s, %s)
+            """, [test_id, user_id, attempt_count + 1, request.POST.get('time_spent', 0)])
+            submission_id = cursor.lastrowid
+            
+            total_score = 0
+            max_possible_score = 0
+            
+            # Lấy câu hỏi và đáp án
+            cursor.execute("""
+                SELECT 
+                    tq.question_id, q.question_type, q.content,
+                    mcq.correct_answers, tq.score
+                FROM test_questions tq
+                JOIN questions q ON tq.question_id = q.id
+                LEFT JOIN multiple_choice_questions mcq ON q.id = mcq.id
+                WHERE tq.test_id = %s
+                ORDER BY tq.question_order
+            """, [test_id])
+            
+            questions = cursor.fetchall()
+            essays_to_grade = 0
+            
+            for question in questions:
+                question_id, question_type, content, correct_answers_json, question_score = question
+                question_score = question_score or 1
+                max_possible_score += question_score
+                
+                user_answer = request.POST.get(f'answer_{question_id}', '').strip()
+                
+                is_correct = False
+                earned_score = 0
+                needs_grading = False
+                
+                if question_type == 'multiple_choice' and user_answer:
+                    correct_answers = json.loads(correct_answers_json) if correct_answers_json else []
+                    is_correct = user_answer.upper() in [ans.upper() for ans in correct_answers]
+                    earned_score = question_score if is_correct else 0
+                    total_score += earned_score
+                elif question_type == 'essay':
+                    needs_grading = True
+                    essays_to_grade += 1
+                
+                answer_data = json.dumps({
+                    'answer': user_answer,
+                    'is_correct': is_correct,
+                    'needs_grading': needs_grading
+                })
+                
+                cursor.execute("""
+                    INSERT INTO answers (submission_id, question_id, answer_content, is_correct, score, needs_grading)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                """, [submission_id, question_id, answer_data, is_correct, earned_score, needs_grading])
+            
+            # Cập nhật điểm
+            cursor.execute("""
+                UPDATE submissions 
+                SET total_score = %s, max_score = %s, needs_grading = %s
+                WHERE id = %s
+            """, [total_score, max_possible_score, (essays_to_grade > 0), submission_id])
+        
+        if essays_to_grade > 0:
+            messages.success(request, f'Nộp bài thành công! Điểm trắc nghiệm: {total_score}. Có {essays_to_grade} câu tự luận cần chấm.')
+        else:
+            messages.success(request, f'Nộp bài thành công! Điểm: {total_score}/{max_possible_score}')
+            
+        return redirect('forum:submissions_history', test_id=test_id)
+        
+    except Exception as e:
+        print(f"ERROR in handle_test_submission: {str(e)}")
+        messages.error(request, f'Có lỗi xảy ra: {str(e)}')
+        return redirect('forum:take_test', test_id=test_id)
+
+def display_test(request, test_id, user_id, attempt_count, test_info):
+    """Hiển thị bài kiểm tra"""
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT 
+                q.id, q.question_type, q.content, q.explanation,
+                mcq.options, mcq.allow_multiple, eq.word_limit
+            FROM test_questions tq
+            JOIN questions q ON tq.question_id = q.id
+            LEFT JOIN multiple_choice_questions mcq ON q.id = mcq.id
+            LEFT JOIN essay_questions eq ON q.id = eq.id
+            WHERE tq.test_id = %s
+            ORDER BY tq.question_order
+        """, [test_id])
+        
+        questions = []
+        for row in cursor.fetchall():
+            options = {}
+            if row[4] and row[1] == 'multiple_choice':
+                try:
+                    options = json.loads(row[4]) if isinstance(row[4], str) else row[4]
+                except:
+                    options = {}
+            
+            questions.append({
+                'id': row[0],
+                'type': row[1],
+                'content': row[2],
+                'explanation': row[3],
+                'options': options,
+                'allow_multiple': bool(row[5]),
+                'word_limit': row[6] or 0
+            })
+    
+    context = {
+        'test': test_info,
+        'test_id': test_id,
+        'attempt_number': attempt_count + 1,
+        'is_authenticated': True,
+        'username': request.session.get('username'),
+        'questions': questions,
+    }
+    
+    return render(request, 'forum/take_test.html', context)
+
 def question_bank(request, subject_id):
-    """Xem ngân hàng câu hỏi của môn học"""
+    """Ngân hàng câu hỏi"""
     if not request.session.get('user_id'):
         messages.warning(request, 'Vui lòng đăng nhập để tiếp tục')
         return redirect('accounts:login')
@@ -951,9 +1173,8 @@ def question_bank(request, subject_id):
             ORDER BY q.created_at DESC
         """, [subject_id])
         
-        questions = []
-        for row in cursor.fetchall():
-            questions.append({
+        questions = [
+            {
                 'id': row[0],
                 'type': row[1],
                 'content': row[2],
@@ -961,11 +1182,14 @@ def question_bank(request, subject_id):
                 'created_at': row[4],
                 'options': row[5],
                 'word_limit': row[6]
-            })
+            }
+            for row in cursor.fetchall()
+        ]
+    
     context = {
         'subject_id': subject_id,
         'username': request.session.get('username'),
-        'is_authenticated': request.session.get('user_id') is not None,
+        'is_authenticated': True,
         'questions': questions,
     }
     return render(request, 'forum/question_bank.html', context)
@@ -976,199 +1200,125 @@ def add_questions_to_test(request, test_id):
         messages.warning(request, 'Vui lòng đăng nhập để tiếp tục')
         return redirect('accounts:login')
     
-    # Lấy thông tin test
     with connection.cursor() as cursor:
-        cursor.execute("SELECT subject_id FROM tests WHERE id = %s", [test_id])
-        test = cursor.fetchone()
-        if not test:
+        cursor.execute("SELECT subject_id, title FROM tests WHERE id = %s", [test_id])
+        test_info = cursor.fetchone()
+        
+        if not test_info:
             raise Http404("Bài kiểm tra không tồn tại")
         
-        subject_id = test[0]
+        subject_id, test_title = test_info
         
-        # Lấy danh sách câu hỏi có sẵn
+        # Lấy câu hỏi chưa có trong bài kiểm tra
         cursor.execute("""
-            SELECT q.id, q.content, q.question_type
+            SELECT q.id, q.content, q.question_type, q.explanation,
+                   COALESCE(mcq.options, '{}') as options,
+                   COALESCE(eq.word_limit, 0) as word_limit,
+                   u.username as author_name
             FROM questions q
+            LEFT JOIN multiple_choice_questions mcq ON q.id = mcq.id
+            LEFT JOIN essay_questions eq ON q.id = eq.id
+            LEFT JOIN users u ON q.author_id = u.id
             WHERE q.subject_id = %s
             AND q.id NOT IN (
                 SELECT question_id FROM test_questions WHERE test_id = %s
             )
+            ORDER BY q.created_at DESC
         """, [subject_id, test_id])
         
         available_questions = []
         for row in cursor.fetchall():
+            options = {}
+            if row[4] and row[4] != '{}':
+                try:
+                    options = json.loads(row[4])
+                except:
+                    pass
+            
             available_questions.append({
                 'id': row[0],
                 'content': row[1],
-                'type': row[2]
+                'type': row[2],
+                'explanation': row[3],
+                'options': options,
+                'word_limit': row[5],
+                'author_name': row[6]
             })
     
     if request.method == 'POST':
-        question_ids = request.POST.getlist('question_ids')
-        with connection.cursor() as cursor:
-            for i, question_id in enumerate(question_ids):
-                cursor.execute("""
-                    INSERT INTO test_questions (test_id, question_id, question_order)
-                    VALUES (%s, %s, %s)
-                """, [test_id, question_id, i])
+        selected_questions = request.POST.getlist('question_ids')
         
-        messages.success(request, 'Thêm câu hỏi vào bài kiểm tra thành công')
-        return redirect('forum:test_detail', test_id=test_id)
+        if not selected_questions:
+            messages.error(request, 'Vui lòng chọn ít nhất một câu hỏi')
+            return redirect('forum:add_questions_to_test', test_id=test_id)
+        
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT COALESCE(MAX(question_order), -1) FROM test_questions 
+                    WHERE test_id = %s
+                """, [test_id])
+                max_order = cursor.fetchone()[0]
+                
+                for i, question_id in enumerate(selected_questions):
+                    cursor.execute("""
+                        INSERT INTO test_questions (test_id, question_id, question_order)
+                        VALUES (%s, %s, %s)
+                    """, [test_id, question_id, max_order + i + 1])
+            
+            messages.success(request, f'Đã thêm {len(selected_questions)} câu hỏi vào bài kiểm tra')
+            return redirect('forum:test_detail', test_id=test_id)
+            
+        except Exception as e:
+            messages.error(request, f'Có lỗi xảy ra: {str(e)}')
+            return redirect('forum:add_questions_to_test', test_id=test_id)
+    
     context = {
         'test_id': test_id,
+        'test_title': test_title,
+        'subject_id': subject_id,
         'username': request.session.get('username'),
-        'is_authenticated': request.session.get('user_id') is not None,
+        'is_authenticated': True,
         'available_questions': available_questions,
-
     }
     return render(request, 'forum/add_questions_to_test.html', context)
 
-def take_test(request, test_id):
-    """Làm bài kiểm tra trực tuyến"""
+def submissions_history(request, test_id):
+    """Lịch sử nộp bài"""
     if not request.session.get('user_id'):
         messages.warning(request, 'Vui lòng đăng nhập để tiếp tục')
         return redirect('accounts:login')
     
     user_id = request.session['user_id']
     
-    # Kiểm tra số lần nộp bài
     with connection.cursor() as cursor:
         cursor.execute("""
-            SELECT COUNT(*) FROM submissions 
+            SELECT id, submitted_at, time_spent, total_score
+            FROM submissions
             WHERE test_id = %s AND author_id = %s
+            ORDER BY submitted_at DESC
         """, [test_id, user_id])
-        attempt_count = cursor.fetchone()[0]
         
-        cursor.execute("""
-            SELECT max_attempts FROM tests WHERE id = %s
-        """, [test_id])
-        max_attempts_result = cursor.fetchone()
-        max_attempts = max_attempts_result[0] if max_attempts_result else 1
-        
-        if attempt_count >= max_attempts:
-            messages.error(request, 'Bạn đã vượt quá số lần nộp bài cho phép')
-            return redirect('forum:test_detail', test_id=test_id)
-    
-    if request.method == 'POST':
-        # Xử lý nộp bài
-        with connection.cursor() as cursor:
-            # Tạo submission
-            cursor.execute("""
-                INSERT INTO submissions (test_id, author_id, attempt_number, time_spent)
-                VALUES (%s, %s, %s, %s)
-            """, [test_id, user_id, attempt_count + 1, request.POST.get('time_spent', 0)])
-            submission_id = cursor.lastrowid
-            
-            # Lưu câu trả lời
-            for key, value in request.POST.items():
-                if key.startswith('answer_'):
-                    question_id = key.replace('answer_', '')
-                    # Đóng gói câu trả lời dưới dạng JSON
-                    answer_data = json.dumps({'answer': value})
-                    cursor.execute("""
-                        INSERT INTO answers (submission_id, question_id, answer_content)
-                        VALUES (%s, %s, %s)
-                    """, [submission_id, question_id, answer_data])
-        
-        messages.success(request, 'Nộp bài thành công')
-        return redirect('forum:submissions_history', test_id=test_id)
-    
-    # Lấy câu hỏi của bài kiểm tra
-    with connection.cursor() as cursor:
-        cursor.execute("""
-            SELECT q.id, q.question_type, q.content, q.explanation,
-                   mcq.options, mcq.allow_multiple, mcq.randomize_options,
-                   eq.word_limit
-            FROM test_questions tq
-            JOIN questions q ON tq.question_id = q.id
-            LEFT JOIN multiple_choice_questions mcq ON q.id = mcq.id
-            LEFT JOIN essay_questions eq ON q.id = eq.id
-            WHERE tq.test_id = %s
-            ORDER BY tq.question_order
-        """, [test_id])
-        
-        questions = []
-        for row in cursor.fetchall():
-            questions.append({
+        submissions = [
+            {
                 'id': row[0],
-                'type': row[1],
-                'content': row[2],
-                'explanation': row[3],
-                'options': row[4],
-                'allow_multiple': bool(row[5]),
-                'randomize_options': bool(row[6]),
-                'word_limit': row[7]
-            })
+                'submitted_at': row[1],
+                'time_spent': row[2],
+                'total_score': row[3]
+            }
+            for row in cursor.fetchall()
+        ]
+    
     context = {
+        'is_authenticated': True,
+        'username': request.session.get('username'),
+        'submissions': submissions,
         'test_id': test_id,
-        'attempt_number': attempt_count + 1,
-        'is_authenticated': request.session.get('user_id') is not None,
-        'questions': questions,
     }
-    return render(request, 'forum/take_test.html', context)
-
-def submit_test(request, test_id):
-    """Nộp bài kiểm tra dạng file"""
-    if not request.session.get('user_id'):
-        messages.warning(request, 'Vui lòng đăng nhập để tiếp tục')
-        return redirect('accounts:login')
-    
-    if request.method == 'POST':
-        user_id = request.session['user_id']
-        answer_file = request.FILES.get('answer_file')
-        notes = request.POST.get('notes', '')
-        time_spent = int(request.POST.get('time_spent', '0'))
-        
-        if not answer_file:
-            messages.error(request, 'Vui lòng tải lên file đáp án')
-            return redirect('forum:test_detail', test_id=test_id)
-        
-        # Lưu file đáp án
-        file_path = default_storage.save(f'test_submissions/{datetime.now().strftime("%Y/%m/%d")}/{answer_file.name}', answer_file)
-        
-        # Lưu thông tin nộp bài vào cơ sở dữ liệu
-        with connection.cursor() as cursor:
-            cursor.execute("""
-                INSERT INTO submissions (test_id, author_id, time_spent, submitted_at)
-                VALUES (%s, %s, %s, CURRENT_TIMESTAMP)
-            """, [test_id, user_id, time_spent])
-        
-        messages.success(request, 'Nộp bài kiểm tra thành công')
-        return redirect('forum:test_detail', test_id=test_id)
-    
-    return redirect('forum:test_detail', test_id=test_id)
-
-def grade_submission(request, submission_id):
-    """Chấm điểm bài nộp"""
-    if not request.session.get('user_id'):
-        messages.warning(request, 'Vui lòng đăng nhập để tiếp tục')
-        return redirect('accounts:login')
-    
-    if request.method == 'POST':
-        with connection.cursor() as cursor:
-            total_score = 0
-            for key, value in request.POST.items():
-                if key.startswith('score_'):
-                    answer_id = key.replace('score_', '')
-                    score = float(value) if value else 0
-                    total_score += score
-                    
-                    cursor.execute("""
-                        UPDATE answers SET score = %s WHERE id = %s
-                    """, [score, answer_id])
-            
-            # Cập nhật tổng điểm
-            cursor.execute("""
-                UPDATE submissions SET total_score = %s WHERE id = %s
-            """, [total_score, submission_id])
-        
-        messages.success(request, 'Chấm điểm thành công')
-        return redirect('forum:submission_detail', submission_id=submission_id)
-    
-    return redirect('forum:submission_detail', submission_id=submission_id)
+    return render(request, 'forum/submissions_history.html', context)
 
 def submission_detail(request, submission_id):
-    """Xem chi tiết bài nộp"""
+    """Chi tiết bài nộp"""
     if not request.session.get('user_id'):
         messages.warning(request, 'Vui lòng đăng nhập để tiếp tục')
         return redirect('accounts:login')
@@ -1186,29 +1336,34 @@ def submission_detail(request, submission_id):
         if not submission:
             raise Http404("Bài nộp không tồn tại")
         
-        # Lấy câu trả lời
         cursor.execute("""
             SELECT a.id, a.answer_content, a.score, 
                    q.id as question_id, q.content as question_content,
-                   q.question_type
+                   q.question_type, mcq.correct_answers
             FROM answers a
             JOIN questions q ON a.question_id = q.id
+            LEFT JOIN multiple_choice_questions mcq ON q.id = mcq.id
             WHERE a.submission_id = %s
         """, [submission_id])
         
         answers = []
         for row in cursor.fetchall():
+            answer_data = json.loads(row[1]) if row[1] else {}
+            correct_answers = json.loads(row[6]) if row[6] else []
+            
             answers.append({
                 'id': row[0],
-                'answer_content': row[1],
+                'answer_content': answer_data.get('answer', ''),
                 'score': row[2],
                 'question_id': row[3],
                 'question_content': row[4],
-                'question_type': row[5]
+                'question_type': row[5],
+                'correct_answers': correct_answers,
             })
+    
     context = {
         'username': request.session.get('username'),
-        'is_authenticated': request.session.get('user_id') is not None,
+        'is_authenticated': True,
         'submission': {
             'id': submission[0],
             'submitted_at': submission[1],
@@ -1221,43 +1376,3 @@ def submission_detail(request, submission_id):
         'answers': answers
     }
     return render(request, 'forum/submission_detail.html', context)
-
-def submissions_history(request, test_id):
-    """Xem lịch sử nộp bài kiểm tra"""
-    if not request.session.get('user_id'):
-        messages.warning(request, 'Vui lòng đăng nhập để tiếp tục')
-        return redirect('accounts:login')
-    
-    user_id = request.session['user_id']
-    
-    with connection.cursor() as cursor:
-        cursor.execute("""
-            SELECT 
-                id, 
-                submitted_at, 
-                time_spent, 
-                total_score
-            FROM submissions
-            WHERE test_id = %s AND author_id = %s
-            ORDER BY submitted_at DESC
-        """, [test_id, user_id])
-        
-        submissions = []
-        for row in cursor.fetchall():
-            submissions.append({
-                'id': row[0],
-                'submitted_at': row[1],
-                'time_spent': row[2],
-                'total_score': row[3]
-            })
-    
-    context = {
-        'submissions': submissions,
-        'test_id': test_id,
-    }
-    return render(request, 'forum/submissions_history.html', context)
-
-
-
-
-

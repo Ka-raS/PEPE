@@ -1,3 +1,8 @@
+department 1:N major
+major N:N subject
+major 1:N student
+=> student N:N subject
+
 - Xóa database có sẵn của django
 
 * home
@@ -10,7 +15,8 @@
 
 * forum
 - Thêm tables rawsql của forum
-
+- Không update số lần làm bài và thông báo không làm được bài nữa
+subject detail thống kê câu hỏi lỗi 
 
 
 * ưu tiên thấp

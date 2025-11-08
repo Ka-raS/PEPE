@@ -7,20 +7,18 @@
 <body>
     <div class="container mt-4">
         <div class="row">
-            <div class="col-md-8">
-                <h2>Làm Bài Kiểm Tra</h2>
-                
-                {% if test %}
-                    <h3>{{ test.title }}</h3>
-                {% endif %}
+            <div class="col-md-12">
+                <h2>Làm Bài Kiểm Tra: {{ test.title }}</h2>
+                <p class="text-muted">Lần làm thứ: {{ attempt_number }}</p>
                 
                 <form method="POST">
                     {% csrf_token %}
+                    <input type="hidden" name="time_spent" value="0">
                     
                     {% for question in questions %}
                     <div class="card mb-4">
                         <div class="card-body">
-                            <h4 class="card-title">Câu {{ forloop.counter }}</h4>
+                            <h5 class="card-title">Câu {{ forloop.counter }}</h5>
                             <p class="card-text">{{ question.content }}</p>
                             
                             {% if question.type == 'multiple_choice' %}
@@ -30,32 +28,26 @@
                                         {% if question.allow_multiple %}
                                         <input class="form-check-input" type="checkbox" 
                                                name="answer_{{ question.id }}[]" 
-                                               value="{{ key }}" 
-                                               id="option_{{ question.id }}_{{ key }}">
+                                               value="{{ key }}">
                                         {% else %}
                                         <input class="form-check-input" type="radio" 
                                                name="answer_{{ question.id }}" 
-                                               value="{{ key }}" 
-                                               id="option_{{ question.id }}_{{ key }}">
+                                               value="{{ key }}">
                                         {% endif %}
-                                        <label class="form-check-label" for="option_{{ question.id }}_{{ key }}">
+                                        <label class="form-check-label">
                                             <strong>{{ key }}.</strong> {{ value }}
                                         </label>
                                     </div>
                                     {% endfor %}
                                 {% else %}
-                                    <p class="text-warning">Không có phương án nào</p>
+                                    <p class="text-warning">Không có phương án trả lời</p>
                                 {% endif %}
                             {% elif question.type == 'essay' %}
-                                <div class="form-group mt-3">
-                                    <textarea class="form-control" name="answer_{{ question.id }}" 
-                                              rows="4" placeholder="Nhập câu trả lời của bạn..."></textarea>
-                                    {% if question.word_limit %}
-                                    <small class="form-text text-muted">
-                                        Giới hạn: {{ question.word_limit }} từ
-                                    </small>
-                                    {% endif %}
-                                </div>
+                                <textarea class="form-control" name="answer_{{ question.id }}" 
+                                          rows="4" placeholder="Nhập câu trả lời của bạn..."></textarea>
+                                {% if question.word_limit %}
+                                <small class="text-muted">Giới hạn: {{ question.word_limit }} từ</small>
+                                {% endif %}
                             {% endif %}
                             
                             {% if question.explanation %}
@@ -77,18 +69,6 @@
                     </div>
                     {% endif %}
                 </form>
-            </div>
-            
-            <div class="col-md-4">
-                <div class="card">
-                    <div class="card-header">
-                        <h5>Thông Tin</h5>
-                    </div>
-                    <div class="card-body">
-                        <p><strong>Lần làm thứ:</strong> {{ attempt_number }}</p>
-                        <p><strong>Số câu hỏi:</strong> {{ questions|length }}</p>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
