@@ -5,18 +5,34 @@
 
 {% block main %}
 <div class="container mt-4">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{% url 'forum:index' %}" class="text-decoration-none">
+                    <i class="bi bi-house"></i> Diễn đàn
+                </a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{% url 'forum:test_detail' submission.test_id %}" class="text-decoration-none">
+                    Bài kiểm tra
+                </a>
+            </li>
+            <li class="breadcrumb-item active">Chi tiết bài nộp #{{ submission.id }}</li>
+        </ol>
+    </nav>
+
     <div class="row">
         <div class="col-lg-8">
-            <div class="card shadow-sm">
-                <div class="card-header bg-info text-white">
+            <div class="card rounded-card shadow-sm">
+                <div class="card-header rounded-card-header bg-info text-white">
                     <h4 class="mb-0">
                         <i class="bi bi-file-text"></i> Chi Tiết Bài Nộp #{{ submission.id }}
                     </h4>
                 </div>
                 <div class="card-body">
                     <!-- Kết quả tổng -->
-                    <div class="card mb-4">
-                        <div class="card-header bg-success text-white">
+                    <div class="card rounded-card mb-4">
+                        <div class="card-header rounded-card-header bg-success text-white">
                             <h5 class="mb-0">
                                 <i class="bi bi-check-circle"></i> Kết Quả
                             </h5>
@@ -50,14 +66,20 @@
                     </div>
 
                     <!-- Danh sách câu trả lời -->
-                    <h5 class="mb-3">Chi Tiết Câu Trả Lời</h5>
+                    <h5 class="mb-3">
+                        <i class="bi bi-list-check"></i> Chi Tiết Câu Trả Lời
+                    </h5>
                     {% for answer in answers %}
-                    <div class="card mb-3 {% if answer.is_correct %}border-success{% elif answer.score == 0 %}border-danger{% endif %}">
+                    <div class="card rounded-card mb-3 {% if answer.is_correct %}border-success{% elif answer.score == 0 %}border-danger{% endif %}">
                         <div class="card-header d-flex justify-content-between align-items-center">
                             <div>
                                 <strong>Câu {{ forloop.counter }}</strong>
                                 <span class="badge {% if answer.question_type == 'multiple_choice' %}bg-info{% else %}bg-warning{% endif %} ms-2">
-                                    {% if answer.question_type == 'multiple_choice' %}Trắc nghiệm{% else %}Tự luận{% endif %}
+                                    {% if answer.question_type == 'multiple_choice' %}
+                                        <i class="bi bi-ui-checks"></i> Trắc nghiệm
+                                    {% else %}
+                                        <i class="bi bi-pencil-square"></i> Tự luận
+                                    {% endif %}
                                 </span>
                             </div>
                             <span class="badge {% if answer.score == 1 %}bg-success{% elif answer.score == 0 %}bg-danger{% else %}bg-secondary{% endif %}">
@@ -71,26 +93,34 @@
                             </span>
                         </div>
                         <div class="card-body">
-                            <h6 class="text-muted">Câu hỏi:</h6>
+                            <h6 class="text-primary">
+                                <i class="bi bi-question-circle"></i> Câu hỏi:
+                            </h6>
                             <p class="mb-3">{{ answer.question_content }}</p>
                             
-                            <h6 class="text-muted">Câu trả lời của bạn:</h6>
-                            <div class="alert {% if answer.is_correct %}alert-success{% elif answer.score == 0 %}alert-danger{% else %}alert-light{% endif %} mb-3">
+                            <h6 class="text-primary">
+                                <i class="bi bi-chat-left-text"></i> Câu trả lời của bạn:
+                            </h6>
+                            <div class="alert rounded-card {% if answer.is_correct %}alert-success{% elif answer.score == 0 %}alert-danger{% else %}alert-light{% endif %} mb-3">
                                 {{ answer.answer_content|default:"<em>Chưa trả lời</em>"|safe }}
                             </div>
                             
                             {% if answer.question_type == 'multiple_choice' and not answer.is_correct %}
-                                <h6 class="text-muted">Đáp án đúng:</h6>
-                                <div class="alert alert-success">
+                                <h6 class="text-success">
+                                    <i class="bi bi-check-circle-fill"></i> Đáp án đúng:
+                                </h6>
+                                <div class="alert alert-success rounded-card">
                                     {{ answer.correct_answer }}
                                 </div>
                             {% endif %}
                         </div>
                     </div>
                     {% empty %}
-                    <div class="text-center py-4">
-                        <i class="bi bi-inbox display-1 text-muted"></i>
-                        <p class="text-muted mt-3">Không có câu trả lời nào</p>
+                    <div class="card rounded-card shadow-sm">
+                        <div class="card-body text-center py-5">
+                            <i class="bi bi-inbox display-1 text-muted"></i>
+                            <p class="text-muted mt-3">Không có câu trả lời nào</p>
+                        </div>
                     </div>
                     {% endfor %}
                 </div>
@@ -99,43 +129,53 @@
 
         <!-- Sidebar -->
         <div class="col-lg-4">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
+            <div class="card rounded-card shadow-sm mb-4">
+                <div class="card-header rounded-card-header bg-primary text-white">
                     <h5 class="mb-0">
                         <i class="bi bi-info-circle"></i> Thông Tin
                     </h5>
                 </div>
                 <div class="card-body">
-                    <div class="mb-3">
-                        <strong>Bài kiểm tra:</strong><br>
-                        {{ submission.test_title }}
-                    </div>
-                    
-                    <div class="mb-3">
-                        <strong>Lần làm thứ:</strong><br>
-                        {{ submission.attempt_number }}
-                    </div>
-                    
-                    <div class="mb-3">
-                        <strong>Thời gian nộp:</strong><br>
-                        {{ submission.created_at|date:"d/m/Y H:i" }}
-                    </div>
-                    
-                    <div class="mb-3">
-                        <strong>Thời gian làm bài:</strong><br>
-                        {{ submission.time_spent }} giây
+                    <div class="list-group list-group-flush">
+                        <div class="list-group-item d-flex justify-content-between align-items-start border-0 px-0">
+                            <div class="text-muted">
+                                <i class="bi bi-file-earmark-text"></i> Bài kiểm tra
+                            </div>
+                            <strong class="text-end">{{ submission.test_title }}</strong>
+                        </div>
+                        
+                        <div class="list-group-item d-flex justify-content-between align-items-center border-0 px-0">
+                            <span class="text-muted">
+                                <i class="bi bi-arrow-repeat"></i> Lần làm thứ
+                            </span>
+                            <strong>{{ submission.attempt_number }}</strong>
+                        </div>
+                        
+                        <div class="list-group-item d-flex justify-content-between align-items-start border-0 px-0">
+                            <span class="text-muted">
+                                <i class="bi bi-calendar-check"></i> Thời gian nộp
+                            </span>
+                            <small class="text-end">{{ submission.created_at|date:"d/m/Y H:i" }}</small>
+                        </div>
+                        
+                        <div class="list-group-item d-flex justify-content-between align-items-center border-0 px-0">
+                            <span class="text-muted">
+                                <i class="bi bi-clock-history"></i> Thời gian làm
+                            </span>
+                            <strong>{{ submission.time_spent }}s</strong>
+                        </div>
                     </div>
                     
                     <hr>
                     
                     <div class="d-grid gap-2">
                         {% if is_test_author %}
-                        <a href="{% url 'forum:grade_submission' submission.id %}" class="btn btn-warning">
+                        <a href="{% url 'forum:grade_submission' submission.id %}" class="btn btn-outline-warning rounded-btn">
                             <i class="bi bi-pencil-square"></i> Chấm bài
                         </a>
                         {% endif %}
 
-                        <a href="{% url 'forum:test_detail' submission.test_id %}" class="btn btn-outline-primary">
+                        <a href="{% url 'forum:test_detail' submission.test_id %}" class="btn btn-outline-secondary rounded-btn">
                             <i class="bi bi-arrow-left"></i> Quay lại
                         </a>
                     </div>
@@ -143,35 +183,41 @@
             </div>
 
             <!-- Thống kê -->
-            <div class="card shadow-sm mt-4">
-                <div class="card-header bg-success text-white">
+            <div class="card rounded-card shadow-sm">
+                <div class="card-header rounded-card-header bg-success text-white">
                     <h5 class="mb-0">
                         <i class="bi bi-graph-up"></i> Thống Kê
                     </h5>
                 </div>
                 <div class="card-body">
                     <div class="mb-3">
-                        <div class="d-flex justify-content-between">
-                            <span>Số câu đúng:</span>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">
+                                <i class="bi bi-check-circle"></i> Số câu đúng
+                            </span>
                             <strong class="text-success">{{ submission.total_score }}</strong>
                         </div>
                         <div class="progress" style="height: 20px;">
-                            <div class="progress-bar bg-success" style="width: {% widthratio submission.total_score submission.max_score 100 %}%">
-                                {% widthratio submission.total_score submission.max_score 100 %}%
+                            <div class="progress-bar bg-success" style="width: {% if submission.max_score > 0 %}{% widthratio submission.total_score submission.max_score 100 %}{% else %}0{% endif %}%">
+                                {% if submission.max_score > 0 %}{% widthratio submission.total_score submission.max_score 100 %}%{% else %}0%{% endif %}
                             </div>
                         </div>
                     </div>
                     
                     <div class="mb-3">
                         <div class="d-flex justify-content-between">
-                            <span>Số câu sai:</span>
+                            <span class="text-muted">
+                                <i class="bi bi-x-circle"></i> Số câu sai
+                            </span>
                             <strong class="text-danger">{{ submission.max_score|add:"-"|add:submission.total_score }}</strong>
                         </div>
                     </div>
                     
-                    <div class="mb-3">
+                    <div class="mb-0">
                         <div class="d-flex justify-content-between">
-                            <span>Tổng số câu:</span>
+                            <span class="text-muted">
+                                <i class="bi bi-list-ol"></i> Tổng số câu
+                            </span>
                             <strong>{{ submission.max_score }}</strong>
                         </div>
                     </div>
@@ -180,4 +226,29 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block style %}
+<style>
+.card,
+.modal-content,
+.alert {
+    border: none;
+    transition: transform 0.2s ease-in-out;
+    box-shadow: 0 2px 12px rgba(44, 62, 80, 0.10), 0 1.5px 6px rgba(52, 152, 219, 0.08);
+}
+
+.list-group-item {
+    background: transparent;
+}
+
+.progress {
+    border-radius: 10px;
+    box-shadow: 0 1px 4px rgba(52, 152, 219, 0.10);
+}
+
+.badge {
+    font-size: 0.75em;
+}
+</style>
 {% endblock %}

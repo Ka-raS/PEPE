@@ -5,14 +5,32 @@
 
 {% block main %}
 <div class="container mt-4">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{% url 'forum:index' %}" class="text-decoration-none">
+                    <i class="bi bi-house"></i> Diễn đàn
+                </a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{% url 'forum:submission_detail' submission_id %}" class="text-decoration-none">
+                    Chi tiết bài làm
+                </a>
+            </li>
+            <li class="breadcrumb-item active">Chấm bài</li>
+        </ol>
+    </nav>
+
     <div class="row">
         <div class="col-lg-10 mx-auto">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">
+            <div class="card rounded-card shadow-sm">
+                <div class="card-header rounded-card-header bg-primary text-white">
+                    <h4 class="mb-1">
                         <i class="bi bi-pencil-square"></i> Chấm Bài - {{ test_title }}
                     </h4>
-                    <small>Sinh viên: {{ student_name }}</small>
+                    <small>
+                        <i class="bi bi-person"></i> Sinh viên: {{ student_name }}
+                    </small>
                 </div>
                 <div class="card-body">
                     {% if essay_answers %}
@@ -20,69 +38,188 @@
                         {% csrf_token %}
                         
                         {% for answer in essay_answers %}
-                        <div class="card mb-4 {% if answer.is_corrected == 1 %}border-success{% elif answer.is_corrected == 0 %}border-danger{% endif %}">
-                            <div class="card-header">
-                                <h6 class="mb-0">Câu {{ forloop.counter }}</h6>
+                        <div class="card rounded-card shadow-sm mb-4 {% if answer.is_corrected == 1 %}border-success{% elif answer.is_corrected == 0 %}border-danger{% endif %}">
+                            <div class="card-header rounded-card-header {% if answer.is_corrected == 1 %}bg-success text-white{% elif answer.is_corrected == 0 %}bg-danger text-white{% else %}bg-light{% endif %}">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0">
+                                        <i class="bi bi-question-circle"></i> Câu {{ forloop.counter }}
+                                    </h6>
+                                    {% if answer.is_corrected == 1 %}
+                                        <span class="badge bg-light text-success">
+                                            <i class="bi bi-check-circle"></i> Đã chấm: Đúng
+                                        </span>
+                                    {% elif answer.is_corrected == 0 %}
+                                        <span class="badge bg-light text-danger">
+                                            <i class="bi bi-x-circle"></i> Đã chấm: Sai
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-warning">
+                                            <i class="bi bi-clock"></i> Chưa chấm
+                                        </span>
+                                    {% endif %}
+                                </div>
                             </div>
                             <div class="card-body">
-                                <h6 class="text-muted">Câu hỏi:</h6>
-                                <p>{{ answer.question_content }}</p>
-                                
-                                {% if answer.word_limit > 0 %}
-                                <small class="text-muted">
-                                    <i class="bi bi-info-circle"></i> Giới hạn: {{ answer.word_limit }} từ
-                                </small>
-                                {% endif %}
-                                
-                                <hr>
-                                
-                                <h6 class="text-muted">Câu trả lời:</h6>
-                                <div class="alert alert-light">
-                                    {{ answer.answer_content|default:"<em>Chưa trả lời</em>"|safe }}
+                                <div class="mb-4">
+                                    <h6 class="text-primary">
+                                        <i class="bi bi-card-text"></i> Câu hỏi:
+                                    </h6>
+                                    <div class="alert alert-light rounded-card">
+                                        {{ answer.question_content }}
+                                    </div>
+                                    
+                                    {% if answer.word_limit > 0 %}
+                                    <small class="text-muted">
+                                        <i class="bi bi-info-circle"></i> Giới hạn: {{ answer.word_limit }} từ
+                                    </small>
+                                    {% endif %}
                                 </div>
                                 
-                                <div class="mt-3">
-                                    <label class="form-label fw-bold">Chấm điểm:</label>
-                                    <div class="btn-group" role="group">
-                                        <input type="radio" class="btn-check" name="grade_{{ answer.answer_id }}" 
-                                               id="correct_{{ answer.answer_id }}" value="1" 
-                                               {% if answer.is_corrected == 1 %}checked{% endif %} required>
-                                        <label class="btn btn-outline-success" for="correct_{{ answer.answer_id }}">
-                                            <i class="bi bi-check-circle"></i> Đúng (1 điểm)
+                                <div class="mb-4">
+                                    <h6 class="text-primary">
+                                        <i class="bi bi-chat-left-text"></i> Câu trả lời của sinh viên:
+                                    </h6>
+                                    <div class="alert alert-info rounded-card">
+                                        {{ answer.answer_content|default:"<em class='text-muted'>Chưa trả lời</em>"|safe }}
+                                    </div>
+                                </div>
+                                
+                                <div class="card bg-light border-0 rounded-card">
+                                    <div class="card-body">
+                                        <label class="form-label fw-bold text-primary">
+                                            <i class="bi bi-star"></i> Chấm điểm:
                                         </label>
-                                        
-                                        <input type="radio" class="btn-check" name="grade_{{ answer.answer_id }}" 
-                                               id="incorrect_{{ answer.answer_id }}" value="0"
-                                               {% if answer.is_corrected == 0 %}checked{% endif %}>
-                                        <label class="btn btn-outline-danger" for="incorrect_{{ answer.answer_id }}">
-                                            <i class="bi bi-x-circle"></i> Sai (0 điểm)
-                                        </label>
+                                        <div class="btn-group w-100" role="group">
+                                            <input type="radio" class="btn-check" name="grade_{{ answer.answer_id }}" 
+                                                   id="correct_{{ answer.answer_id }}" value="1" 
+                                                   {% if answer.is_corrected == 1 %}checked{% endif %} required>
+                                            <label class="btn btn-outline-success rounded-btn" for="correct_{{ answer.answer_id }}">
+                                                <i class="bi bi-check-circle"></i> Đúng (1 điểm)
+                                            </label>
+                                            
+                                            <input type="radio" class="btn-check" name="grade_{{ answer.answer_id }}" 
+                                                   id="incorrect_{{ answer.answer_id }}" value="0"
+                                                   {% if answer.is_corrected == 0 %}checked{% endif %}>
+                                            <label class="btn btn-outline-danger rounded-btn" for="incorrect_{{ answer.answer_id }}">
+                                                <i class="bi bi-x-circle"></i> Sai (0 điểm)
+                                            </label>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                         {% endfor %}
                         
-                        <div class="text-center mt-4">
-                            <a href="{% url 'forum:submission_detail' submission_id %}" class="btn btn-secondary me-2">
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'forum:submission_detail' submission_id %}" class="btn btn-outline-secondary rounded-btn">
                                 <i class="bi bi-arrow-left"></i> Quay lại
                             </a>
-                            <button type="submit" class="btn btn-primary">
+                            <button type="submit" class="btn btn-primary rounded-btn">
                                 <i class="bi bi-check-circle"></i> Lưu điểm
                             </button>
                         </div>
                     </form>
                     {% else %}
-                    <div class="alert alert-info">
-                        <i class="bi bi-info-circle"></i> Bài làm này không có câu tự luận nào cần chấm.
+                    <div class="card rounded-card border-0 bg-light">
+                        <div class="card-body text-center py-5">
+                            <i class="bi bi-info-circle display-1 text-muted"></i>
+                            <h4 class="text-muted mt-3">Không có câu tự luận</h4>
+                            <p class="text-muted">Bài làm này không có câu tự luận nào cần chấm.</p>
+                            <a href="{% url 'forum:submission_detail' submission_id %}" class="btn btn-outline-secondary rounded-btn mt-3">
+                                <i class="bi bi-arrow-left"></i> Quay lại
+                            </a>
+                        </div>
                     </div>
-                    <a href="{% url 'forum:submission_detail' submission_id %}" class="btn btn-secondary">
-                        <i class="bi bi-arrow-left"></i> Quay lại
-                    </a>
                     {% endif %}
                 </div>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block style %}
+<style>
+.btn-group {
+    gap: 10px;
+}
+
+.btn-group .btn {
+    flex: 1;
+}
+
+.btn-outline-success.rounded-btn:hover {
+    background: linear-gradient(135deg, #198754, #157347);
+    color: white;
+}
+
+.btn-outline-danger.rounded-btn {
+    background: linear-gradient(135deg, #dc3545, #bb2d3b);
+    color: white;
+    border: none;
+}
+
+.btn-outline-danger.rounded-btn:hover {
+    background: linear-gradient(135deg, #bb2d3b, #a02834);
+    box-shadow: 0 4px 15px rgba(220, 53, 69, 0.4);
+}
+
+.btn-check:checked + .btn-outline-success {
+    background: linear-gradient(135deg, #198754, #157347);
+    border-color: #198754;
+}
+
+.btn-check:checked + .btn-outline-danger {
+    background: linear-gradient(135deg, #dc3545, #bb2d3b);
+    border-color: #dc3545;
+}
+</style>
+{% endblock %}
+
+{% block script %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Lấy tất cả các radio button
+    const radioButtons = document.querySelectorAll('.btn-check');
+    
+    radioButtons.forEach(function(radio) {
+        radio.addEventListener('change', function() {
+            // Tìm card cha
+            const card = this.closest('.card.rounded-card.shadow-sm.mb-4');
+            const cardHeader = card.querySelector('.card-header');
+            
+            // Xóa tất cả class màu cũ
+            card.classList.remove('border-success', 'border-danger');
+            cardHeader.classList.remove('bg-success', 'bg-danger', 'bg-light', 'text-white');
+            
+            // Xóa badge cũ nếu có
+            const oldBadge = cardHeader.querySelector('.badge');
+            if (oldBadge) {
+                oldBadge.remove();
+            }
+            
+            // Thêm badge và màu mới dựa vào lựa chọn
+            const badgeContainer = cardHeader.querySelector('.d-flex');
+            let newBadge = '';
+            
+            if (this.value === '1') {
+                // Chọn Đúng
+                card.classList.add('border-success');
+                cardHeader.classList.add('bg-success', 'text-white');
+                newBadge = '<span class="badge bg-light text-success"><i class="bi bi-check-circle"></i> Đã chấm: Đúng</span>';
+            } else if (this.value === '0') {
+                // Chọn Sai
+                card.classList.add('border-danger');
+                cardHeader.classList.add('bg-danger', 'text-white');
+                newBadge = '<span class="badge bg-light text-danger"><i class="bi bi-x-circle"></i> Đã chấm: Sai</span>';
+            }
+            
+            // Thêm badge mới
+            if (newBadge) {
+                badgeContainer.insertAdjacentHTML('beforeend', newBadge);
+            }
+        });
+    });
+});
+</script>
 {% endblock %}
