@@ -42,7 +42,7 @@
                             <div>
                                 <h5 class="alert-heading mb-1">Thông tin môn học</h5>
                                 <p class="mb-0">
-                                    <strong>Môn học:</strong> 
+                                    <strong>Môn học:</strong>
                                     <span id="subject-name">Đang tải...</span>
                                 </p>
                             </div>
@@ -51,23 +51,22 @@
 
                     <form method="post" id="test-form">
                         {% csrf_token %}
-                        
+
                         <!-- Tiêu đề -->
                         <div class="mb-4">
                             <label for="title" class="form-label fw-semibold">
                                 Tiêu đề bài kiểm tra <span class="text-danger">*</span>
                             </label>
-                            <input type="text" class="form-control form-control-lg rounded-input" id="title" name="title" 
-                                   placeholder="Nhập tiêu đề bài kiểm tra..." required
-                                   maxlength="200">
+                            <input type="text" class="form-control form-control-lg rounded-input" id="title"
+                                name="title" placeholder="Nhập tiêu đề bài kiểm tra..." required maxlength="200">
                             <div class="form-text">Tiêu đề nên ngắn gọn và mô tả rõ nội dung bài kiểm tra</div>
                         </div>
 
                         <!-- Mô tả -->
                         <div class="mb-4">
-                            <label for="content" class="form-label fw-semibold">Mô tả bài kiểm tra</label>
-                            <textarea class="form-control rounded-input" id="content" name="content" rows="4"
-                                      placeholder="Mô tả chi tiết về bài kiểm tra, yêu cầu, hướng dẫn làm bài..."></textarea>
+                            <label for="description" class="form-label fw-semibold">Mô tả bài kiểm tra</label>
+                            <textarea class="form-control rounded-input" id="description" name="description" rows="4"
+                                placeholder="Mô tả chi tiết về bài kiểm tra, yêu cầu, hướng dẫn làm bài..."></textarea>
                             <div class="form-text">Cung cấp thông tin hữu ích cho người làm bài</div>
                         </div>
 
@@ -77,8 +76,8 @@
                                 <label for="time_limit" class="form-label fw-semibold">
                                     Thời gian làm bài (phút)
                                 </label>
-                                <input type="number" class="form-control rounded-input" id="time_limit" name="time_limit" 
-                                       value="60" min="1" max="480" required>
+                                <input type="number" class="form-control rounded-input" id="time_limit"
+                                    name="time_limit" value="60" min="1" max="480" required>
                                 <div class="form-text">Thời gian tối đa để hoàn thành bài kiểm tra</div>
                             </div>
 
@@ -87,18 +86,113 @@
                                 <label for="max_attempts" class="form-label fw-semibold">
                                     Số lần làm bài tối đa
                                 </label>
-                                <input type="number" class="form-control rounded-input" id="max_attempts" name="max_attempts" 
-                                       value="1" min="1" max="10" required>
+                                <input type="number" class="form-control rounded-input" id="max_attempts"
+                                    name="max_attempts" value="1" min="1" max="10" required>
                                 <div class="form-text">Số lần người dùng được phép làm bài kiểm tra</div>
                             </div>
                         </div>
 
                         <!-- Hạn nộp bài -->
                         <div class="mb-4">
-                            <label for="due_date" class="form-label fw-semibold">Hạn nộp bài</label>
-                            <input type="datetime-local" class="form-control rounded-input" id="due_date" name="due_date">
+                            <label for="ends_at" class="form-label fw-semibold">Hạn nộp bài</label>
+                            <input type="datetime-local" class="form-control rounded-input" id="ends_at" name="ends_at">
                             <div class="form-text">
                                 Để trống nếu bài kiểm tra không có hạn nộp cụ thể
+                            </div>
+                        </div>
+
+                        <!-- Phần thêm câu hỏi -->
+                        <div class="card border-0 shadow-sm rounded-card mb-4">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-patch-question"></i> Câu hỏi đã chọn
+                                    <span class="badge bg-primary" id="selected-count">0</span>
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="selected-questions-list">
+                                    <p class="text-muted mb-0">Chưa có câu hỏi nào được chọn</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form tạo câu hỏi mới -->
+                        <div class="card border-0 shadow-sm rounded-card mb-4">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="mb-0"><i class="bi bi-plus-circle"></i> Thêm câu hỏi mới</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Loại câu hỏi</label>
+                                    <select class="form-select rounded-input" id="question_type">
+                                        <option value="multiple_choice">Trắc nghiệm</option>
+                                        <option value="essay">Tự luận</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Nội dung câu hỏi <span
+                                            class="text-danger">*</span></label>
+                                    <textarea class="form-control rounded-input" id="question_content" rows="3"
+                                        placeholder="Nhập nội dung câu hỏi..."></textarea>
+                                </div>
+
+                                <!-- Fields cho trắc nghiệm -->
+                                <div id="multiple_choice_fields">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <label class="form-label fw-semibold mb-0">Các đáp án</label>
+                                        <button type="button" class="btn btn-sm btn-outline-success rounded-btn" id="add-option-btn">
+                                            <i class="bi bi-plus-circle"></i> Thêm đáp án
+                                        </button>
+                                    </div>
+                                    <div id="options-container">
+                                        <div class="option-row mb-2">
+                                            <div class="input-group">
+                                                <span class="input-group-text">A</span>
+                                                <input type="text" class="form-control option-input" placeholder="Nhập đáp án A">
+                                                <div class="input-group-text">
+                                                    <input type="radio" name="correct_answer" value="0" class="form-check-input mt-0">
+                                                </div>
+                                                <button type="button" class="btn btn-outline-danger btn-sm remove-option-btn">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="option-row mb-2">
+                                            <div class="input-group">
+                                                <span class="input-group-text">B</span>
+                                                <input type="text" class="form-control option-input" placeholder="Nhập đáp án B">
+                                                <div class="input-group-text">
+                                                    <input type="radio" name="correct_answer" value="1" class="form-check-input mt-0">
+                                                </div>
+                                                <button type="button" class="btn btn-outline-danger btn-sm remove-option-btn">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-text mb-3">Tối thiểu 2 đáp án.</div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="randomize_options">
+                                        <label class="form-check-label" for="randomize_options">
+                                            Xáo trộn thứ tự đáp án
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Fields cho tự luận -->
+                                <div id="essay_fields" style="display: none;">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold">Giới hạn số từ</label>
+                                        <input type="number" class="form-control rounded-input" id="word_limit"
+                                            value="0" min="0" placeholder="0 = không giới hạn">
+                                    </div>
+                                </div>
+
+                                <button type="button" class="btn btn-success w-100 rounded-btn mt-3"
+                                    id="add-new-question">
+                                    <i class="bi bi-plus-circle"></i> Thêm câu hỏi này
+                                </button>
                             </div>
                         </div>
 
@@ -116,7 +210,8 @@
 
                         <!-- Nút hành động -->
                         <div class="d-flex justify-content-between align-items-center pt-3 border-top">
-                            <a href="{% url 'forum:subject_detail' subject_id %}" class="btn btn-outline-secondary rounded-btn">
+                            <a href="{% url 'forum:subject_detail' subject_id %}"
+                                class="btn btn-outline-secondary rounded-btn">
                                 <i class="bi bi-arrow-left"></i> Quay lại
                             </a>
                             <div>
@@ -139,328 +234,235 @@
 
 {% block style %}
 <style>
-/* Form input rounded */
-.rounded-input {
-    border-radius: 10px;
-    border: 2px solid #e9ecef;
-    transition: all 0.3s ease;
-}
+    /* Form input rounded */
+    .rounded-input {
+        border-radius: 10px;
+        border: 2px solid #e9ecef;
+        transition: all 0.3s ease;
+    }
 
-.rounded-input:focus {
-    border-color: #198754;
-    box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25);
-}
+    .rounded-input:focus {
+        border-color: #198754;
+        box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25);
+    }
 
-/* Tab rounded */
-.rounded-tab {
-    border-radius: 10px 10px 0 0;
-    transition: all 0.3s ease;
-}
+    /* Tab rounded */
+    .rounded-tab {
+        border-radius: 10px 10px 0 0;
+        transition: all 0.3s ease;
+    }
 
-.rounded-tab.active {
-    background-color: #fff;
-    border-color: #dee2e6 #dee2e6 #fff;
-}
+    .rounded-tab.active {
+        background-color: #fff;
+        border-color: #dee2e6 #dee2e6 #fff;
+    }
 
-/* Question item */
-.question-item {
-    border: 1px solid #e9ecef;
-    border-radius: 10px;
-    padding: 12px;
-    margin-bottom: 10px;
-    transition: all 0.2s ease;
-}
+    /* Question item */
+    .question-item {
+        border: 1px solid #e9ecef;
+        border-radius: 10px;
+        padding: 12px;
+        margin-bottom: 10px;
+        transition: all 0.2s ease;
+    }
 
-.question-item:hover {
-    background-color: #f8f9fa;
-    transform: translateX(5px);
-}
+    .question-item:hover {
+        background-color: #f8f9fa;
+        transform: translateX(5px);
+    }
 
-.question-item.selected {
-    border-color: #198754;
-    background-color: #f8fff9;
-}
+    .question-item.selected {
+        border-color: #198754;
+        background-color: #f8fff9;
+    }
 
-/* Selected question item */
-.selected-question-item {
-    background-color: #f8f9fa;
-    border-radius: 10px;
-    padding: 10px;
-    margin-bottom: 8px;
-    border-left: 4px solid #198754;
-    transition: all 0.2s ease;
-}
+    /* Selected question item */
+    .selected-question-item {
+        background-color: #f8f9fa;
+        border-radius: 10px;
+        padding: 10px;
+        margin-bottom: 8px;
+        border-left: 4px solid #198754;
+        transition: all 0.2s ease;
+    }
 
-.selected-question-item:hover {
-    background-color: #e9ecef;
-}
+    .selected-question-item:hover {
+        background-color: #e9ecef;
+    }
 
-/* Input group rounded */
-.input-group-text {
-    background-color: #e9ecef;
-    border: 2px solid #e9ecef;
-}
+    /* Input group rounded */
+    .input-group-text {
+        background-color: #e9ecef;
+        border: 2px solid #e9ecef;
+    }
 
-.input-group .form-control {
-    border: 2px solid #e9ecef;
-}
+    .input-group .form-control {
+        border: 2px solid #e9ecef;
+    }
 
-.btn-outline-danger.rounded-btn:not(header .btn-outline-danger) {
-    background: linear-gradient(135deg, #dc3545, #bb2d3b);
-    color: white;
-    border: none;
-}
+    .btn-outline-danger.rounded-btn:not(header .btn-outline-danger) {
+        background: linear-gradient(135deg, #dc3545, #bb2d3b);
+        color: white;
+        border: none;
+    }
 
-.btn-outline-danger.rounded-btn:not(header .btn-outline-danger):hover {
-    background: linear-gradient(135deg, #bb2d3b, #a02834);
-    box-shadow: 0 4px 15px rgba(220, 53, 69, 0.4);
-}
+    .btn-outline-danger.rounded-btn:not(header .btn-outline-danger):hover {
+        background: linear-gradient(135deg, #bb2d3b, #a02834);
+        box-shadow: 0 4px 15px rgba(220, 53, 69, 0.4);
+    }
 </style>
 {% endblock %}
 
 {% block script %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Biến lưu trữ câu hỏi đã chọn
-    let selectedQuestions = [];
-    let availableQuestions = [];
+    document.addEventListener('DOMContentLoaded', function () {
+        let selectedQuestions = [];
 
-    // Khởi tạo
-    loadSubjectInfo();
-    loadQuestionBank();
-    setupEventListeners();
+        // Toggle hiển thị fields theo loại câu hỏi
+        document.getElementById('question_type')?.addEventListener('change', function() {
+            const isMC = this.value === 'multiple_choice';
+            document.getElementById('multiple_choice_fields').style.display = isMC ? 'block' : 'none';
+            document.getElementById('essay_fields').style.display = isMC ? 'none' : 'block';
+        });
 
-    function loadSubjectInfo() {
-        // Giả lập load thông tin môn học
-        document.getElementById('subject-name').textContent = 'Môn học #{{ subject_id }}';
-    }
-
-    function loadQuestionBank() {
-        // Giả lập load câu hỏi từ ngân hàng
-        setTimeout(() => {
-            const container = document.getElementById('question-bank-container');
-            container.innerHTML = `
-                <div class="question-list">
-                    <div class="question-item" data-id="1">
-                        <div class="form-check">
-                            <input class="form-check-input question-checkbox" type="checkbox" value="1">
-                            <label class="form-check-label w-100">
-                                <div class="d-flex justify-content-between">
-                                    <strong>Câu hỏi trắc nghiệm mẫu 1</strong>
-                                    <span class="badge bg-info">Trắc nghiệm</span>
-                                </div>
-                                <small class="text-muted">Nội dung câu hỏi trắc nghiệm mẫu...</small>
-                            </label>
-                        </div>
+        // Thêm đáp án mới
+        document.getElementById('add-option-btn')?.addEventListener('click', function() {
+            const container = document.getElementById('options-container');
+            const count = container.children.length;
+            
+            const div = document.createElement('div');
+            div.className = 'option-row mb-2';
+            div.innerHTML = `
+                <div class="input-group">
+                    <span class="input-group-text">${String.fromCharCode(65 + count)}</span>
+                    <input type="text" class="form-control option-input" placeholder="Nhập đáp án ${String.fromCharCode(65 + count)}">
+                    <div class="input-group-text">
+                        <input type="radio" name="correct_answer" value="${count}" class="form-check-input mt-0">
                     </div>
-                    <div class="question-item" data-id="2">
-                        <div class="form-check">
-                            <input class="form-check-input question-checkbox" type="checkbox" value="2">
-                            <label class="form-check-label w-100">
-                                <div class="d-flex justify-content-between">
-                                    <strong>Câu hỏi tự luận mẫu</strong>
-                                    <span class="badge bg-warning">Tự luận</span>
-                                </div>
-                                <small class="text-muted">Nội dung câu hỏi tự luận mẫu...</small>
-                            </label>
-                        </div>
-                    </div>
-                    <div class="question-item" data-id="3">
-                        <div class="form-check">
-                            <input class="form-check-input question-checkbox" type="checkbox" value="3">
-                            <label class="form-check-label w-100">
-                                <div class="d-flex justify-content-between">
-                                    <strong>Câu hỏi trắc nghiệm mẫu 2</strong>
-                                    <span class="badge bg-info">Trắc nghiệm</span>
-                                </div>
-                                <small class="text-muted">Nội dung câu hỏi trắc nghiệm mẫu khác...</small>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-                <div class="mt-3">
-                    <button type="button" class="btn btn-primary" id="add-selected-questions">
-                        <i class="bi bi-plus-circle"></i> Thêm câu hỏi đã chọn
+                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="this.closest('.option-row').remove(); updateLabels()">
+                        <i class="bi bi-trash"></i>
                     </button>
                 </div>
             `;
-
-            // Thêm event listener cho nút thêm câu hỏi đã chọn
-            document.getElementById('add-selected-questions').addEventListener('click', addSelectedFromBank);
-        }, 1000);
-    }
-
-    function setupEventListeners() {
-        // Toggle fields theo loại câu hỏi
-        document.getElementById('question_type').addEventListener('change', function() {
-            const type = this.value;
-            document.getElementById('multiple_choice_fields').style.display = 
-                type === 'multiple_choice' ? 'block' : 'none';
-            document.getElementById('essay_fields').style.display = 
-                type === 'essay' ? 'block' : 'none';
+            container.appendChild(div);
         });
 
-        // Thêm câu hỏi mới
-        document.getElementById('add-new-question').addEventListener('click', addNewQuestion);
+        // Cập nhật lại label A, B, C...
+        window.updateLabels = function() {
+            document.querySelectorAll('#options-container .option-row').forEach((row, i) => {
+                const label = String.fromCharCode(65 + i);
+                row.querySelector('.input-group-text').textContent = label;
+                row.querySelector('.option-input').placeholder = `Nhập đáp án ${label}`;
+                row.querySelector('[type="radio"]').value = i;
+            });
+        };
 
-        // Xử lý form submit
-        document.getElementById('test-form').addEventListener('submit', function(e) {
+        // Thêm câu hỏi vào danh sách
+        document.getElementById('add-new-question')?.addEventListener('click', function() {
+            const type = document.getElementById('question_type').value;
+            const content = document.getElementById('question_content').value.trim();
+
+            if (!content) return alert('Vui lòng nhập nội dung câu hỏi');
+
+            const question = { id: 'new_' + Date.now(), type, content, source: 'new' };
+
+            if (type === 'multiple_choice') {
+                const options = [...document.querySelectorAll('.option-input')]
+                    .map(input => input.value.trim())
+                    .filter(Boolean);
+                const correctAnswer = document.querySelector('[name="correct_answer"]:checked');
+
+                if (options.length < 2) return alert('Cần ít nhất 2 đáp án');
+                if (!correctAnswer) return alert('Chọn đáp án đúng');
+
+                question.options = options;
+                question.correct_answer_index = parseInt(correctAnswer.value);
+                question.randomize_options = document.getElementById('randomize_options')?.checked || false;
+            } else {
+                question.word_limit = parseInt(document.getElementById('word_limit')?.value) || 0;
+            }
+
+            selectedQuestions.push(question);
+            renderSelectedQuestions();
+            resetForm();
+        });
+
+        // Hiển thị danh sách câu hỏi đã chọn
+        function renderSelectedQuestions() {
+            const container = document.getElementById('selected-questions-list');
+            
             if (selectedQuestions.length === 0) {
-                e.preventDefault();
-                alert('Vui lòng thêm ít nhất một câu hỏi vào bài kiểm tra');
+                container.innerHTML = '<p class="text-muted mb-0">Chưa có câu hỏi nào</p>';
+                document.getElementById('selected-count').textContent = '0';
                 return;
             }
 
-            // Thêm các câu hỏi đã chọn vào form data
-            selectedQuestions.forEach((question, index) => {
+            container.innerHTML = selectedQuestions.map(q => {
+                const badge = q.type === 'multiple_choice' 
+                    ? '<span class="badge bg-info">Trắc nghiệm</span>'
+                    : '<span class="badge bg-warning">Tự luận</span>';
+                
+                const detail = q.type === 'multiple_choice'
+                    ? `<small class="text-success">Đáp án: ${String.fromCharCode(65 + q.correct_answer_index)}. ${q.options[q.correct_answer_index]}</small>`
+                    : '';
+
+                return `
+                    <div class="selected-question-item">
+                        <div class="d-flex justify-content-between">
+                            <div class="flex-grow-1">
+                                <strong>${q.content.substring(0, 80)}...</strong> ${badge}
+                                <br><small class="text-muted">${q.content}</small>
+                                ${detail ? '<br>' + detail : ''}
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeQuestion('${q.id}')">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('selected-count').textContent = selectedQuestions.length;
+        }
+
+        // Xóa câu hỏi
+        window.removeQuestion = function(id) {
+            selectedQuestions = selectedQuestions.filter(q => q.id !== id);
+            renderSelectedQuestions();
+        };
+
+        // Reset form
+        function resetForm() {
+            document.getElementById('question_content').value = '';
+            document.querySelectorAll('.option-input').forEach(input => input.value = '');
+            document.querySelectorAll('[name="correct_answer"]').forEach(radio => radio.checked = false);
+            if (document.getElementById('word_limit')) {
+                document.getElementById('word_limit').value = '0';
+            }
+        }
+
+        // Submit form
+        document.getElementById('test-form').addEventListener('submit', function(e) {
+            if (selectedQuestions.length === 0) {
+                e.preventDefault();
+                return alert('Thêm ít nhất 1 câu hỏi');
+            }
+
+            selectedQuestions.forEach(q => {
                 const input = document.createElement('input');
                 input.type = 'hidden';
                 input.name = 'selected_questions';
-                input.value = JSON.stringify(question);
+                input.value = JSON.stringify(q);
                 this.appendChild(input);
             });
         });
-    }
 
-    function addSelectedFromBank() {
-        const checkboxes = document.querySelectorAll('.question-checkbox:checked');
-        checkboxes.forEach(checkbox => {
-            const questionItem = checkbox.closest('.question-item');
-            const questionId = questionItem.dataset.id;
-            const questionText = questionItem.querySelector('strong').textContent;
-            const questionType = questionItem.querySelector('.badge').textContent;
-            const questionContent = questionItem.querySelector('small').textContent;
-
-            // Kiểm tra xem câu hỏi đã được thêm chưa
-            if (!selectedQuestions.find(q => q.id === questionId)) {
-                const question = {
-                    id: questionId,
-                    type: questionType === 'Trắc nghiệm' ? 'multiple_choice' : 'essay',
-                    content: questionContent,
-                    text: questionText,
-                    source: 'bank'
-                };
-
-                selectedQuestions.push(question);
-                addQuestionToSelectedList(question);
-            }
-        });
-
-        updateSelectedCount();
-    }
-
-    function addNewQuestion() {
-        const type = document.getElementById('question_type').value;
-        const content = document.getElementById('question_content').value.trim();
-        const explanation = document.getElementById('explanation').value.trim();
-
-        if (!content) {
-            alert('Vui lòng nhập nội dung câu hỏi');
-            return;
+        // Set min datetime
+        const dateInput = document.getElementById('ends_at');
+        if (dateInput) {
+            const now = new Date();
+            dateInput.min = now.toISOString().slice(0, 16);
         }
-
-        let questionData = {
-            id: 'new_' + Date.now(),
-            type: type,
-            content: content,
-            explanation: explanation,
-            source: 'new'
-        };
-
-        if (type === 'multiple_choice') {
-            const options = {};
-            document.querySelectorAll('.option-input').forEach((input, index) => {
-                const optionValue = input.value.trim();
-                if (optionValue) {
-                    options[String.fromCharCode(65 + index)] = optionValue;
-                }
-            });
-            questionData.options = options;
-        } else if (type === 'essay') {
-            questionData.word_limit = document.getElementById('word_limit').value;
-        }
-
-        selectedQuestions.push(questionData);
-        addQuestionToSelectedList(questionData);
-
-        // Reset form
-        document.getElementById('question_content').value = '';
-        document.getElementById('explanation').value = '';
-        document.querySelectorAll('.option-input').forEach(input => input.value = '');
-        document.getElementById('word_limit').value = '0';
-
-        updateSelectedCount();
-    }
-
-    function addQuestionToSelectedList(question) {
-        const container = document.getElementById('selected-questions-list');
-        
-        if (container.querySelector('.text-muted')) {
-            container.innerHTML = '';
-        }
-
-        const questionElement = document.createElement('div');
-        questionElement.className = 'selected-question-item';
-        questionElement.innerHTML = `
-            <div class="d-flex justify-content-between align-items-start">
-                <div class="flex-grow-1">
-                    <strong>${question.text || question.content.substring(0, 50)}...</strong>
-                    <br>
-                    <small class="text-muted">
-                        ${question.content}
-                        ${question.source === 'new' ? '<span class="badge bg-success ms-2">Mới</span>' : ''}
-                    </small>
-                </div>
-                <button type="button" class="btn btn-sm btn-outline-danger remove-question" 
-                        data-id="${question.id}">
-                    <i class="bi bi-trash"></i>
-                </button>
-            </div>
-        `;
-
-        container.appendChild(questionElement);
-
-        // Thêm event listener cho nút xóa
-        questionElement.querySelector('.remove-question').addEventListener('click', function() {
-            const questionId = this.dataset.id;
-            removeQuestion(questionId);
-        });
-    }
-
-    function removeQuestion(questionId) {
-        selectedQuestions = selectedQuestions.filter(q => q.id !== questionId);
-        updateSelectedList();
-        updateSelectedCount();
-    }
-
-    function updateSelectedList() {
-        const container = document.getElementById('selected-questions-list');
-        container.innerHTML = '';
-
-        if (selectedQuestions.length === 0) {
-            container.innerHTML = '<p class="text-muted mb-0">Chưa có câu hỏi nào được chọn</p>';
-            return;
-        }
-
-        selectedQuestions.forEach(question => {
-            addQuestionToSelectedList(question);
-        });
-    }
-
-    function updateSelectedCount() {
-        document.getElementById('selected-count').textContent = selectedQuestions.length;
-    }
-
-    // Đặt min datetime cho hạn nộp bài (ngày hiện tại)
-    const dueDateInput = document.getElementById('due_date');
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    
-    dueDateInput.min = `${year}-${month}-${day}T${hours}:${minutes}`;
-});
+    });
 </script>
 {% endblock %}

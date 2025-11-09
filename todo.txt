@@ -1,23 +1,12 @@
-department 1:N major
-major N:N subject
-major 1:N student
-=> student N:N subject
-
-- Xóa database có sẵn của django
-
 * home
-- index.html không hiện coin nếu user_type là "teacher"
 - xóa bới thông tin thừa trong từ điển context ở index(request)
 
 * accounts
-- Index teacher
-- Đăng ký chọn student/teacher
+- thêm student_code teacher_code
 
 * forum
-- Thêm tables rawsql của forum
-- Không update số lần làm bài và thông báo không làm được bài nữa
-subject detail thống kê câu hỏi lỗi 
-
+- thêm bảng multiple_choice_options
+- backend
 
 * ưu tiên thấp
 - Teacher năm kinh nghiệm

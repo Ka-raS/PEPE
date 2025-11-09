@@ -71,14 +71,6 @@
             </div>
 
             <div class="info-grid">
-              <div class="info-item">
-                <label>Họ và tên</label>
-                {% if request.GET.edit %}
-                  <input type="text" name="full_name" class="form-control rounded-input" value="{{ full_name|default:'' }}">
-                {% else %}
-                  <p class="info-value">{{ full_name|default:"Chưa cập nhật" }}</p>
-                {% endif %}
-              </div>
 
               <div class="info-item">
                 <label>Tên đăng nhập</label>
@@ -90,8 +82,26 @@
                 <p class="info-value">{{ email }}</p>
               </div>
 
+              <div class="info-item">
+                <label>Họ và tên</label>
+                {% if request.GET.edit %}
+                  <input type="text" name="full_name" class="form-control rounded-input" value="{{ full_name|default:'' }}">
+                {% else %}
+                  <p class="info-value">{{ full_name|default:"Chưa cập nhật" }}</p>
+                {% endif %}
+              </div>
+
               {% if user_type == 'student' %}
                 <!-- Thông tin Sinh viên -->
+                <div class="info-item">
+                  <label>Mã sinh viên</label>
+                  {% if request.GET.edit %}
+                    <input type="text" name="student_code" class="form-control rounded-input" value="{{ student_code|default:'' }}">
+                  {% else %}
+                    <p class="info-value">{{ student_code|default:"Chưa cập nhật" }}</p>
+                  {% endif %}
+                </div>
+
                 <div class="info-item">
                   <label>Chuyên ngành</label>
                   {% if request.GET.edit %}
@@ -113,12 +123,9 @@
                   {% if request.GET.edit %}
                     <select name="enrollment_year" class="form-control rounded-input">
                       <option value="">-- Chọn năm --</option>
-                      <option value="1" {% if year_of_study == 1 %}selected{% endif %}>Năm 1</option>
-                      <option value="2" {% if year_of_study == 2 %}selected{% endif %}>Năm 2</option>
-                      <option value="3" {% if year_of_study == 3 %}selected{% endif %}>Năm 3</option>
-                      <option value="4" {% if year_of_study == 4 %}selected{% endif %}>Năm 4</option>
-                      <option value="5" {% if year_of_study == 5 %}selected{% endif %}>Năm 5</option>
-                      <option value="6" {% if year_of_study == 6 %}selected{% endif %}>Năm 6</option>
+                      {% for i in "123456" %}
+                      <option value="{{ i }}" {% if year_of_study|stringformat:"s" == i %}selected{% endif %}>Năm {{ i }}</option>
+                      {% endfor %}
                     </select>
                   {% else %}
                     <p class="info-value">
@@ -130,20 +137,42 @@
                     </p>
                   {% endif %}
                 </div>
+
               {% else %}
                 <!-- Thông tin Giảng viên -->
+                <div class="info-item">
+                  <label>Mã giảng viên</label>
+                  {% if request.GET.edit %}
+                    <input type="text" name="teacher_code" class="form-control rounded-input" value="{{ teacher_code|default:'' }}">
+                  {% else %}
+                    <p class="info-value">{{ teacher_code|default:"Chưa cập nhật" }}</p>
+                  {% endif %}
+                </div>
+
                 <div class="info-item">
                   <label>Học vị</label>
                   {% if request.GET.edit %}
                     <select name="title" class="form-control rounded-input">
-                      <option value="Cử nhân" {% if title == "Cử nhân" %}selected{% endif %}>Cử nhân</option>
-                      <option value="Thạc sĩ" {% if title == "Thạc sĩ" %}selected{% endif %}>Thạc sĩ</option>
-                      <option value="Tiến sĩ" {% if title == "Tiến sĩ" %}selected{% endif %}>Tiến sĩ</option>
-                      <option value="Giáo sư" {% if title == "Giáo sư" %}selected{% endif %}>Giáo sư</option>
-                      <option value="Phó Giáo sư" {% if title == "Phó Giáo sư" %}selected{% endif %}>Phó Giáo sư</option>
+                      <option value="">-- Chọn học vị --</option>
+                      <option value="Phó giáo sư" {% if degree == "Phó giáo sư" %}selected{% endif %}>Phó giáo sư</option>
+                      <option value="Giáo sư" {% if degree == "Giáo sư" %}selected{% endif %}>Giáo sư</option>
                     </select>
                   {% else %}
                     <p class="info-value">{{ title|default:"Chưa cập nhật" }}</p>
+                  {% endif %}
+                </div>
+
+                <div class="info-item">
+                  <label>Học hàm</label>
+                  {% if request.GET.edit %}
+                    <select name="degree" class="form-control rounded-input">
+                      <option value="">-- Chọn học hàm --</option>
+                      <option value="Cử nhân" {% if title == "Cử nhân" %}selected{% endif %}>Cử nhân</option>
+                      <option value="Thạc sĩ" {% if title == "Thạc sĩ" %}selected{% endif %}>Thạc sĩ</option>
+                      <option value="Tiến sĩ" {% if title == "Tiến sĩ" %}selected{% endif %}>Tiến sĩ</option>
+                    </select>
+                  {% else %}
+                    <p class="info-value">{{ degree|default:"Chưa cập nhật" }}</p>
                   {% endif %}
                 </div>
 

@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Chấm Bài - {{ test_title }}{% endblock %}
+
+{% block main %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-lg-10 mx-auto">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-pencil-square"></i> Chấm Bài - {{ test_title }}
+                    </h4>
+                    <small>Sinh viên: {{ student_name }}</small>
+                </div>
+                <div class="card-body">
+                    {% if essay_answers %}
+                    <form method="POST">
+                        {% csrf_token %}
+                        
+                        {% for answer in essay_answers %}
+                        <div class="card mb-4 {% if answer.is_corrected == 1 %}border-success{% elif answer.is_corrected == 0 %}border-danger{% endif %}">
+                            <div class="card-header">
+                                <h6 class="mb-0">Câu {{ forloop.counter }}</h6>
+                            </div>
+                            <div class="card-body">
+                                <h6 class="text-muted">Câu hỏi:</h6>
+                                <p>{{ answer.question_content }}</p>
+                                
+                                {% if answer.word_limit > 0 %}
+                                <small class="text-muted">
+                                    <i class="bi bi-info-circle"></i> Giới hạn: {{ answer.word_limit }} từ
+                                </small>
+                                {% endif %}
+                                
+                                <hr>
+                                
+                                <h6 class="text-muted">Câu trả lời:</h6>
+                                <div class="alert alert-light">
+                                    {{ answer.answer_content|default:"<em>Chưa trả lời</em>"|safe }}
+                                </div>
+                                
+                                <div class="mt-3">
+                                    <label class="form-label fw-bold">Chấm điểm:</label>
+                                    <div class="btn-group" role="group">
+                                        <input type="radio" class="btn-check" name="grade_{{ answer.answer_id }}" 
+                                               id="correct_{{ answer.answer_id }}" value="1" 
+                                               {% if answer.is_corrected == 1 %}checked{% endif %} required>
+                                        <label class="btn btn-outline-success" for="correct_{{ answer.answer_id }}">
+                                            <i class="bi bi-check-circle"></i> Đúng (1 điểm)
+                                        </label>
+                                        
+                                        <input type="radio" class="btn-check" name="grade_{{ answer.answer_id }}" 
+                                               id="incorrect_{{ answer.answer_id }}" value="0"
+                                               {% if answer.is_corrected == 0 %}checked{% endif %}>
+                                        <label class="btn btn-outline-danger" for="incorrect_{{ answer.answer_id }}">
+                                            <i class="bi bi-x-circle"></i> Sai (0 điểm)
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        
+                        <div class="text-center mt-4">
+                            <a href="{% url 'forum:submission_detail' submission_id %}" class="btn btn-secondary me-2">
+                                <i class="bi bi-arrow-left"></i> Quay lại
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> Lưu điểm
+                            </button>
+                        </div>
+                    </form>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> Bài làm này không có câu tự luận nào cần chấm.
+                    </div>
+                    <a href="{% url 'forum:submission_detail' submission_id %}" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left"></i> Quay lại
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

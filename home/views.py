@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from django.shortcuts import render
 from django.db import connection
 
@@ -20,56 +18,21 @@ def index(request):
     context = {
         'is_authenticated': True,
         'username': request.session.get('username'),
-        'email': request.session.get('email'),
-        'user_type': request.session.get('user_type'),
-        'first_name': request.session.get('first_name', ''),
-        'last_name': request.session.get('last_name', ''),
     }
-    
-    # Tạo full_name
-    full_name = f"{context['first_name']} {context['last_name']}".strip()
-    context['full_name'] = full_name or context['username']
         
-    # Query chỉ dữ liệu người dùng không có trong session
+    # Query chỉ dữ liệu cần thiết
     with connection.cursor() as cursor:
-        if context['user_type'] == 'student':
+        # Lấy major_name cho phần gợi ý
+        if request.session.get('user_type') == 'student':
             cursor.execute("""
-                SELECT 
-                    u.avatar_path,
-                    s.student_code, 
-                    s.enrollment_year,
-                    m.name as major_name
-                FROM users u
-                LEFT JOIN students s ON u.id = s.id
+                SELECT m.name
+                FROM students s
                 LEFT JOIN majors m ON s.major_id = m.id
-                WHERE u.id = %s
+                WHERE s.id = %s
             """, [user_id])
             
             row = cursor.fetchone()
-            if row:
-                context['avatar_path'] = row[0]
-                context['student_code'] = row[1]
-                context['enrollment_year'] = row[2]
-                context['major_name'] = row[3]
-            
-        elif context['user_type'] == 'teacher':
-            # Query thông tin giảng viên nếu cần
-            cursor.execute("""
-                SELECT 
-                    u.avatar_path,
-                    d.name as department_name,
-                    t.title
-                FROM users u
-                LEFT JOIN teachers t ON u.id = t.id
-                LEFT JOIN departments d ON t.department_id = d.id
-                WHERE u.id = %s
-            """, [user_id])
-            
-            row = cursor.fetchone()
-            if row:
-                context['avatar_path'] = row[0]
-                context['department'] = row[1]
-                context['title'] = row[2]
+            context['major_name'] = row[0] if row else None
     
         # Tìm 5 Bài đăng tài liệu làm gợi ý
         cursor.execute("""
@@ -149,8 +112,9 @@ def index(request):
                 t.id,
                 t.title,
                 t.description,
+                t.time_limit,
                 t.created_at,
-                t.due_date,
+                t.ends_at,
                 u.username AS author_name,
                 u.avatar_path AS author_avatar_path,
                 s.name as subject_name,
@@ -166,14 +130,15 @@ def index(request):
                 'id': row[0],
                 'title': row[1],
                 'description': row[2],
-                'created_at': row[3],
-                'due_date': row[4],
-                'author_name': row[5],
-                'author_avatar_path': row[6],
-                'subject_name': row[7],
-                'question_count': row[8],
+                'time_limit': row[3],
+                'created_at': row[4],
+                'ends_at': row[5],
+                'author_name': row[6],
+                'author_avatar_path': row[7],
+                'subject_name': row[8],
+                'question_count': row[9],
             }
             for row in cursor.fetchall()
         ]
-    print(*context['latest_tests'], sep='\n')
+
     return render(request, 'home/index.html', context)

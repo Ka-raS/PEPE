@@ -142,10 +142,10 @@
                 </span>
                 {% endif %}
 
-                {% if test.due_date %}
+                {% if test.ends_at %}
                 <span class="badge {% if test.is_active %}bg-warning text-dark{% else %}bg-danger{% endif %}">
                   <i class="bi bi-calendar"></i>
-                  Hạn: {{ test.due_date|date:"d/m/Y H:i" }}
+                  Hạn: {{ test.ends_at|date:"d/m/Y H:i" }}
                 </span>
                 {% endif %}
               </div>

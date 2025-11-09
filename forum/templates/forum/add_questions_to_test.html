@@ -112,37 +112,62 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Xem Trước Câu Hỏi</h5>
+                <h5 class="modal-title">Xem Trước Câu Hỏi #{{ question.id }}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p><strong>Nội dung:</strong></p>
-                <p>{{ question.content }}</p>
+                <div class="mb-3">
+                    <strong>Nội dung câu hỏi:</strong>
+                    <p class="mt-2">{{ question.content }}</p>
+                </div>
                 
-                <p><strong>Loại:</strong> 
-                    {% if question.type == 'multiple_choice' %}
-                        Trắc nghiệm
-                    {% else %}
-                        Tự luận
+                <div class="mb-3">
+                    <strong>Loại câu hỏi:</strong>
+                    <span class="badge {% if question.type == 'multiple_choice' %}bg-info{% else %}bg-warning{% endif %} ms-2">
+                        {% if question.type == 'multiple_choice' %}
+                            Trắc nghiệm
+                        {% else %}
+                            Tự luận
+                        {% endif %}
+                    </span>
+                </div>
+                
+                {% if question.type == 'multiple_choice' %}
+                    {% if question.options %}
+                    <div class="mb-3">
+                        <strong>Các đáp án:</strong>
+                        <div class="list-group mt-2">
+                            {% for key, option in question.options.items %}
+                            <div class="list-group-item {% if option.is_correct %}list-group-item-success{% endif %}">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <strong>{{ key }}.</strong> {{ option.content }}
+                                    </div>
+                                    {% if option.is_correct %}
+                                        <span class="badge bg-success">Đáp án đúng</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
                     {% endif %}
-                </p>
-                
-                {% if question.explanation %}
-                <p><strong>Giải thích:</strong> {{ question.explanation }}</p>
+                {% elif question.type == 'essay' %}
+                    <div class="mb-3">
+                        <strong>Giới hạn từ:</strong> 
+                        {% if question.word_limit > 0 %}
+                            {{ question.word_limit }} từ
+                        {% else %}
+                            Không giới hạn
+                        {% endif %}
+                    </div>
                 {% endif %}
                 
-                {% if question.type == 'multiple_choice' and question.options %}
-                <p><strong>Phương án:</strong></p>
-                <ul>
-                    {% for key, value in question.options.items %}
-                    <li><strong>{{ key }}.</strong> {{ value }}</li>
-                    {% endfor %}
-                </ul>
-                {% endif %}
-                
-                {% if question.type == 'essay' and question.word_limit %}
-                <p><strong>Giới hạn từ:</strong> {{ question.word_limit }}</p>
-                {% endif %}
+                <div class="mb-3">
+                    <small class="text-muted">
+                        <i class="bi bi-person"></i> Tác giả: {{ question.author_name }}
+                    </small>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
@@ -152,6 +177,9 @@
 </div>
 {% endfor %}
 
+{% endblock %}
+
+{% block script %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const selectAll = document.getElementById('select-all');

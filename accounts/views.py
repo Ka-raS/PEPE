@@ -1,3 +1,4 @@
+import os
 import hashlib
 from pathlib import Path
 
@@ -67,43 +68,40 @@ def index(request):
                 # 2. Cập nhật bảng riêng (students hoặc teachers)
                 if user_type == 'student':
                     major_id = request.POST.get('major_id') or None
+                    student_code = request.POST.get('student_code').strip() or None
                     enrollment_year = request.POST.get('enrollment_year') or None
                     
                     cursor.execute("SELECT id FROM students WHERE id = %s", [user_id])
                     if cursor.fetchone():
                         cursor.execute("""
                             UPDATE students 
-                            SET major_id = %s, enrollment_year = %s 
+                            SET major_id = %s, enrollment_year = %s, student_code = %s
                             WHERE id = %s
-                        """, [major_id, enrollment_year, user_id])
+                        """, [major_id, enrollment_year, student_code, user_id])
                     else:
                         cursor.execute("""
-                            INSERT INTO students (id, major_id, enrollment_year) 
-                            VALUES (%s, %s, %s)
-                        """, [user_id, major_id, enrollment_year])
+                            INSERT INTO students (id, student_code, enrollment_year, major_id) 
+                            VALUES (%s, %s, %s, %s)
+                        """, [user_id, student_code, major_id, enrollment_year])
                 
                 elif user_type == 'teacher':
                     title = request.POST.get('title', '').strip()
+                    degree = request.POST.get('degree', '').strip()
                     department_id = request.POST.get('department') or None
-                    subjects_taught_ids = request.POST.getlist('subjects_taught')
-                    
+                    teacher_code = request.POST.get('teacher_code').strip() or None
+
                     cursor.execute("SELECT id FROM teachers WHERE id = %s", [user_id])
                     if cursor.fetchone():
                         cursor.execute("""
-                            UPDATE teachers SET title = %s, department_id = %s WHERE id = %s
-                        """, [title, department_id, user_id])
+                            UPDATE teachers 
+                            SET title = %s, teacher_code = %s, degree = %s, department_id = %s, teacher_code = %s
+                            WHERE id = %s
+                        """, [title, teacher_code, degree, department_id, teacher_code, user_id])
                     else:
                         cursor.execute("""
-                            INSERT INTO teachers (id, title, department_id) VALUES (%s, %s, %s, %s)
-                        """, [user_id, title, department_id])
-                    
-                    # Cập nhật bảng N-N teacher_subjects
-                    cursor.execute("DELETE FROM teacher_subjects WHERE teacher_id = %s", [user_id])
-                    if subjects_taught_ids:
-                        insert_data = [(user_id, subject_id) for subject_id in subjects_taught_ids if subject_id]
-                        cursor.executemany("""
-                            INSERT INTO teacher_subjects (teacher_id, subject_id) VALUES (%s, %s)
-                        """, insert_data)
+                            INSERT INTO teachers (id, teacher_code, title, degree, department_id) VALUES (%s, %s, %s, %s, %s)
+                        """, [user_id, teacher_code, title, degree, department_id])
+
 
             messages.success(request, 'Cập nhật thông tin thành công!')
             return redirect('accounts:index')
@@ -128,7 +126,7 @@ def index(request):
             if user_type == 'student':
                 # Lấy dữ liệu SINH VIÊN
                 cursor.execute("""
-                    SELECT s.major_id, m.name AS major_name, s.enrollment_year
+                    SELECT s.major_id, m.name AS major_name, s.enrollment_year, s.student_code
                     FROM students s
                     LEFT JOIN majors m ON s.major_id = m.id
                     WHERE s.id = %s
@@ -138,6 +136,7 @@ def index(request):
                     context['current_major_id'] = student_data[0]
                     context['major_name'] = student_data[1]
                     context['year_of_study'] = student_data[2]
+                    context['student_code'] = student_data[3]
 
                 # Lấy danh sách majors
                 cursor.execute("SELECT id, name FROM majors ORDER BY name")
@@ -159,11 +158,11 @@ def index(request):
                 
                 # Lấy bài kiểm tra gần đây
                 cursor.execute("""
-                    SELECT t.title, s.submitted_at 
+                    SELECT t.title, s.created_at
                     FROM submissions s
                     JOIN tests t ON s.test_id = t.id
                     WHERE s.author_id = %s
-                    ORDER BY s.submitted_at DESC
+                    ORDER BY s.created_at DESC
                     LIMIT 3
                 """, [user_id])
                 recent_tests = cursor.fetchall()
@@ -197,7 +196,7 @@ def index(request):
             elif user_type == 'teacher':
                 # Lấy dữ liệu GIẢNG VIÊN
                 cursor.execute("""
-                    SELECT t.title, t.department_id, d.name AS department_name
+                    SELECT t.title, t.department_id, d.name AS department_name, t.degree, t.teacher_code
                     FROM teachers t
                     LEFT JOIN departments d ON t.department_id = d.id
                     WHERE t.id = %s
@@ -208,6 +207,8 @@ def index(request):
                     context['title'] = teacher_data[0]
                     context['current_department_id'] = teacher_data[1]
                     context['department_name'] = teacher_data[2]
+                    context['degree'] = teacher_data[3]
+                    context['teacher_code'] = teacher_data[4]
                 
                 # Lấy danh sách departments
                 cursor.execute("SELECT id, name FROM departments ORDER BY name")
@@ -279,7 +280,7 @@ def register_view(request):
     password_confirm   = request.POST.get('password_confirm')
     first_name         = request.POST.get('first_name') or None
     last_name          = request.POST.get('last_name') or None
-    user_type          = request.POST.get('user_type', 'student')
+    user_type          = request.POST.get('user_type')
     
     # Validation
     if password != password_confirm:
@@ -308,10 +309,21 @@ def register_view(request):
             # Tạo profile mới
             cursor.execute("""
                 INSERT INTO users
-                    (username, email, password, first_name, last_name, user_type)
-                VALUES (%s, %s, %s, %s, %s, %s)
-            """, [username, email, hashed_password, first_name, last_name, user_type])
-            
+                    (username, email, password, first_name, last_name)
+                VALUES (%s, %s, %s, %s, %s)
+            """, [username, email, hashed_password, first_name, last_name])
+
+            if user_type == 'student':
+                cursor.execute("""
+                    INSERT INTO students (id) 
+                    VALUES (%s)
+                """, [cursor.lastrowid])
+            elif user_type == 'teacher':
+                cursor.execute("""
+                    INSERT INTO teachers (id) 
+                    VALUES (%s)
+                """, [cursor.lastrowid])
+
         messages.success(request, 'Đăng ký thành công! Vui lòng đăng nhập.')
         return redirect('accounts:login')
         
@@ -329,7 +341,7 @@ def login_view(request):
     
     with connection.cursor() as cursor:
         cursor.execute("""
-            SELECT id, username, password, email, first_name, last_name, user_type 
+            SELECT id, username, password, email, first_name, last_name
             FROM users
             WHERE username = %s
         """, [username])
@@ -344,7 +356,13 @@ def login_view(request):
     request.session['user_id']   = user_data[0]
     request.session['username']  = user_data[1]
     request.session['email']     = user_data[3]
-    request.session['user_type'] = user_data[6]
+
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT id FROM students WHERE id = %s", [user_data[0]])
+        if cursor.fetchone():
+            request.session['user_type'] = 'student'
+        else:
+            request.session['user_type'] = 'teacher'
     
     messages.success(request, f'Xin chào {request.session['username']}!')
     return redirect('home:index')
@@ -400,7 +418,10 @@ def update_avatar(request):
             if old_avatar and old_avatar[0]:
                 old_path = settings.MEDIA_ROOT / old_avatar[0]
                 if old_path.exists():
-                    old_path.unlink()
+                    try:
+                        os.remove(old_path)
+                    except:
+                        pass
         
         # Lưu file mới
         full_path = default_storage.save(str(file_path), avatar_file)

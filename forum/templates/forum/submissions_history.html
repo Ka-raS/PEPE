@@ -12,14 +12,19 @@
                     <i class="bi bi-house"></i> Diễn đàn
                 </a>
             </li>
+            <li class="breadcrumb-item">
+                <a href="{% url 'forum:test_detail' test_id %}" class="text-decoration-none">
+                    {{ test_title }}
+                </a>
+            </li>
             <li class="breadcrumb-item active">Lịch sử nộp bài</li>
         </ol>
     </nav>
 
     <div class="card shadow-sm">
         <div class="card-header bg-primary text-white">
-            <h4 class="card-title mb-0">
-                <i class="bi bi-clock-history"></i> Lịch Sử Nộp Bài
+            <h4 class="mb-0">
+                <i class="bi bi-clock-history"></i> Lịch Sử Nộp Bài - {{ test_title }}
             </h4>
         </div>
         <div class="card-body">
@@ -28,31 +33,59 @@
                 <table class="table table-hover">
                     <thead>
                         <tr>
-                            <th>#</th>
+                            <th>Lần thứ</th>
                             <th>Thời gian nộp</th>
                             <th>Thời gian làm</th>
                             <th>Điểm số</th>
+                            <th>Tỷ lệ</th>
                             <th>Hành động</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for submission in submissions %}
                         <tr>
-                            <td>{{ forloop.counter }}</td>
-                            <td>{{ submission.submitted_at|date:"d/m/Y H:i" }}</td>
-                            <td>{{ submission.time_spent }} phút</td>
+                            <td>
+                                <span class="badge bg-info">Lần {{ submission.attempt_number }}</span>
+                            </td>
+                            <td>{{ submission.created_at|date:"d/m/Y H:i" }}</td>
+                            <td>
+                                {% if submission.time_spent < 60 %}
+                                    {{ submission.time_spent }} giây
+                                {% else %}
+                                    {{ submission.time_spent|floatformat:0|add:"0"|divisibleby:60|yesno:"0," }}{{ submission.time_spent|divisibleby:60|yesno:",0" }}
+                                    {% widthratio submission.time_spent 60 1 %} phút
+                                    {% if submission.time_spent|divisibleby:60 %}
+                                    {% else %}
+                                        {{ submission.time_spent|add:"-60"|divisibleby:60|yesno:"0," }}
+                                    {% endif %}
+                                {% endif %}
+                            </td>
                             <td>
                                 {% if submission.total_score is not None %}
-                                <span class="badge bg-success">
-                                    {{ submission.total_score }} điểm
-                                </span>
+                                    <strong class="text-primary">{{ submission.total_score }}/{{ submission.max_score }}</strong>
                                 {% else %}
-                                <span class="badge bg-secondary">Chờ chấm</span>
+                                    <span class="badge bg-secondary">Chờ chấm</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if submission.total_score is not None and submission.max_score > 0 %}
+                                    <div class="progress" style="width: 100px; height: 20px;">
+                                        {% widthratio submission.total_score submission.max_score 100 as percent %}
+                                        <div class="progress-bar 
+                                            {% if percent >= 80 %}bg-success
+                                            {% elif percent >= 50 %}bg-warning
+                                            {% else %}bg-danger{% endif %}" 
+                                            style="width: {{ percent }}%">
+                                            {{ percent }}%
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    -
                                 {% endif %}
                             </td>
                             <td>
                                 <a href="{% url 'forum:submission_detail' submission.id %}" class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-eye"></i> Xem chi tiết
+                                    <i class="bi bi-eye"></i> Chi tiết
                                 </a>
                             </td>
                         </tr>
@@ -60,6 +93,64 @@
                     </tbody>
                 </table>
             </div>
+            
+            <!-- Thống kê -->
+            <div class="card mt-4 bg-light">
+                <div class="card-body">
+                    <h5 class="card-title">Thống Kê</h5>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h3 class="text-primary">{{ submissions|length }}</h3>
+                                <small class="text-muted">Tổng số lần làm</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                {% with submissions|first as best %}
+                                    {% if best.total_score is not None %}
+                                        <h3 class="text-success">{{ best.total_score }}/{{ best.max_score }}</h3>
+                                        <small class="text-muted">Điểm cao nhất</small>
+                                    {% else %}
+                                        <h3 class="text-muted">-</h3>
+                                        <small class="text-muted">Chưa có điểm</small>
+                                    {% endif %}
+                                {% endwith %}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                {% with submissions|first as latest %}
+                                    {% if latest.total_score is not None %}
+                                        <h3 class="text-info">{{ latest.total_score }}/{{ latest.max_score }}</h3>
+                                        <small class="text-muted">Lần làm gần nhất</small>
+                                    {% else %}
+                                        <h3 class="text-muted">-</h3>
+                                        <small class="text-muted">Chưa có điểm</small>
+                                    {% endif %}
+                                {% endwith %}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                {% with submissions|first as best %}
+                                    {% if best.total_score is not None and best.max_score > 0 %}
+                                        {% widthratio best.total_score best.max_score 100 as best_percent %}
+                                        <h3 class="{% if best_percent >= 80 %}text-success{% elif best_percent >= 50 %}text-warning{% else %}text-danger{% endif %}">
+                                            {{ best_percent }}%
+                                        </h3>
+                                        <small class="text-muted">Tỷ lệ tốt nhất</small>
+                                    {% else %}
+                                        <h3 class="text-muted">-</h3>
+                                        <small class="text-muted">Chưa có kết quả</small>
+                                    {% endif %}
+                                {% endwith %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
             {% else %}
             <div class="text-center py-5">
                 <i class="bi bi-inbox display-1 text-muted"></i>
@@ -71,6 +162,14 @@
             </div>
             {% endif %}
         </div>
+        
+        {% if submissions %}
+        <div class="card-footer">
+            <a href="{% url 'forum:test_detail' test_id %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Quay lại bài kiểm tra
+            </a>
+        </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

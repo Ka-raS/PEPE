@@ -82,8 +82,8 @@
                             </div>
                             <div class="col-md-6">
                                 <strong><i class="bi bi-calendar-check"></i> Hạn nộp bài:</strong><br>
-                                {% if test.due_date %}
-                                {{ test.due_date|date:"d/m/Y H:i" }}
+                                {% if test.ends_at %}
+                                {{ test.ends_at|date:"d/m/Y H:i" }}
                                 {% else %}
                                 <span class="text-muted">Không có hạn nộp</span>
                                 {% endif %}
@@ -173,10 +173,12 @@
                             <i class="bi bi-clock-history"></i> Lịch sử làm bài
                         </a>
                         
+                        {% if is_author %}
                         <a href="{% url 'forum:add_questions_to_test' test.id %}" class="btn btn-success">
                             <i class="bi bi-plus-circle"></i> Thêm Câu Hỏi Từ Ngân Hàng
                         </a>
-                        
+                        {% endif %}
+
                         <a href="{% url 'forum:subject_detail' test.subject_id %}" class="btn btn-outline-secondary">
                             <i class="bi bi-arrow-left"></i> Quay lại môn học
                         </a>
@@ -216,32 +218,23 @@
             </div>
 
             <!-- Tiến độ -->
-            <div class="card shadow-sm">
-                <div class="card-header bg-warning text-dark">
-                    <h5 class="card-title mb-0">
-                        <i class="bi bi-speedometer2"></i> Tiến độ
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="text-center mb-3">
-                        <div class="display-6 fw-bold text-primary">0</div>
-                        <small class="text-muted">Lần đã làm</small>
-                    </div>
-                    
-                    <div class="progress mb-2" style="height: 8px;">
-                        <div class="progress-bar" role="progressbar" style="width: 0%"></div>
-                    </div>
-                    <small class="text-muted">{{ current_user_attempts }}/{{ test.max_attempts }} lần đã sử dụng</small>
-                    
-                    <hr>
-                    
-                    <div class="text-center">
-                        <small class="text-muted">
-                            <i class="bi bi-info-circle"></i>
-                            Bạn còn {{ test.max_attempts }} lần làm bài
-                        </small>
-                    </div>
-                </div>
+            <div class="text-center mb-3">
+                <div class="display-6 fw-bold text-primary">{{ current_user_attempts }}</div>
+                <small class="text-muted">Lần đã làm</small>
+            </div>
+            
+            <div class="progress mb-2" style="height: 8px;">
+                <div class="progress-bar" role="progressbar" style="width: {{ progress_percent }}%"></div>
+            </div>
+            <small class="text-muted">{{ current_user_attempts }}/{{ test.max_attempts }} lần đã sử dụng</small>
+            
+            <hr>
+            
+            <div class="text-center">
+                <small class="text-muted">
+                    <i class="bi bi-info-circle"></i>
+                    Bạn còn {{ remaining_attempts }} lần làm bài
+                </small>
             </div>
         </div>
     </div>

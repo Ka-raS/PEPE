@@ -18,10 +18,12 @@ urlpatterns = [
     path('create_test/<int:subject_id>/', views.create_test, name='create_test'),
     path('take_test/<int:test_id>/', views.take_test, name='take_test'),
     path('test/<int:test_id>/', views.test_detail, name='test_detail'),
+    
     path('create_question/<int:subject_id>/', views.create_question, name='create_question'),
     path('question_bank/<int:subject_id>/', views.question_bank, name='question_bank'),
     path('add_questions_to_test/<int:test_id>/', views.add_questions_to_test, name='add_questions_to_test'),
-    path('submit_test/<int:test_id>/', views.submit_test, name='submit_test'),
+
     path('submission/<int:submission_id>/', views.submission_detail, name='submission_detail'),
     path('submissions_history/<int:test_id>/', views.submissions_history, name='submissions_history'),
+    path('submission/<int:submission_id>/grade/', views.grade_submission, name='grade_submission'),
 ]

@@ -1,96 +1,120 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Làm Bài Kiểm Tra</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body>
-    <div class="container mt-4">
-        <div class="row">
-            <div class="col-md-8">
-                <h2>Làm Bài Kiểm Tra</h2>
-                
-                {% if test %}
-                    <h3>{{ test.title }}</h3>
-                {% endif %}
-                
-                <form method="POST">
-                    {% csrf_token %}
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ test.title }}{% endblock %}
+
+{% block main %}
+
+<div class="row">
+    <div class="col-md-8">
+        <h2>{{ test.title }}</h2>
+        <p class="text-muted">Lần làm thứ {{ attempt_number }}</p>
+        
+        <form method="POST" id="test-form">
+            {% csrf_token %}
+            <input type="hidden" name="time_spent" id="time_spent" value="0">
+            
+            {% for question in questions %}
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Câu {{ forloop.counter }}</h5>
+                    <p class="card-text">{{ question.content }}</p>
                     
-                    {% for question in questions %}
-                    <div class="card mb-4">
-                        <div class="card-body">
-                            <h4 class="card-title">Câu {{ forloop.counter }}</h4>
-                            <p class="card-text">{{ question.content }}</p>
-                            
-                            {% if question.type == 'multiple_choice' %}
-                                {% if question.options %}
-                                    {% for key, value in question.options.items %}
-                                    <div class="form-check mb-2">
-                                        {% if question.allow_multiple %}
-                                        <input class="form-check-input" type="checkbox" 
-                                               name="answer_{{ question.id }}[]" 
-                                               value="{{ key }}" 
-                                               id="option_{{ question.id }}_{{ key }}">
-                                        {% else %}
-                                        <input class="form-check-input" type="radio" 
-                                               name="answer_{{ question.id }}" 
-                                               value="{{ key }}" 
-                                               id="option_{{ question.id }}_{{ key }}">
-                                        {% endif %}
-                                        <label class="form-check-label" for="option_{{ question.id }}_{{ key }}">
-                                            <strong>{{ key }}.</strong> {{ value }}
-                                        </label>
-                                    </div>
-                                    {% endfor %}
-                                {% else %}
-                                    <p class="text-warning">Không có phương án nào</p>
-                                {% endif %}
-                            {% elif question.type == 'essay' %}
-                                <div class="form-group mt-3">
-                                    <textarea class="form-control" name="answer_{{ question.id }}" 
-                                              rows="4" placeholder="Nhập câu trả lời của bạn..."></textarea>
-                                    {% if question.word_limit %}
-                                    <small class="form-text text-muted">
-                                        Giới hạn: {{ question.word_limit }} từ
-                                    </small>
-                                    {% endif %}
-                                </div>
-                            {% endif %}
-                            
-                            {% if question.explanation %}
-                            <div class="alert alert-info mt-3">
-                                <strong>Gợi ý:</strong> {{ question.explanation }}
+                    {% if question.type == 'multiple_choice' %}
+                        {% if question.options %}
+                            {% for key, option in question.options.items %}
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="radio" 
+                                       name="answer_{{ question.id }}" 
+                                       value="{{ option.id }}" 
+                                       id="option_{{ question.id }}_{{ key }}">
+                                <label class="form-check-label" for="option_{{ question.id }}_{{ key }}">
+                                    <strong>{{ key }}.</strong> {{ option.content }}
+                                </label>
                             </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-warning">Không có phương án nào</p>
+                        {% endif %}
+                        
+                    {% elif question.type == 'essay' %}
+                        <div class="form-group mt-3">
+                            <textarea class="form-control" name="answer_{{ question.id }}" 
+                                      rows="4" placeholder="Nhập câu trả lời của bạn..."
+                                      {% if question.word_limit > 0 %}maxlength="{{ question.word_limit }}"{% endif %}></textarea>
+                            {% if question.word_limit > 0 %}
+                            <small class="form-text text-muted">
+                                Giới hạn: {{ question.word_limit }} từ
+                            </small>
                             {% endif %}
                         </div>
-                    </div>
-                    {% empty %}
-                    <div class="alert alert-warning">
-                        Bài kiểm tra này chưa có câu hỏi nào.
-                    </div>
-                    {% endfor %}
-                    
-                    {% if questions %}
-                    <div class="text-center mt-4">
-                        <button type="submit" class="btn btn-primary btn-lg">Nộp Bài</button>
-                    </div>
                     {% endif %}
-                </form>
-            </div>
-            
-            <div class="col-md-4">
-                <div class="card">
-                    <div class="card-header">
-                        <h5>Thông Tin</h5>
-                    </div>
-                    <div class="card-body">
-                        <p><strong>Lần làm thứ:</strong> {{ attempt_number }}</p>
-                        <p><strong>Số câu hỏi:</strong> {{ questions|length }}</p>
-                    </div>
                 </div>
+            </div>
+            {% empty %}
+            <div class="alert alert-warning">
+                Bài kiểm tra này chưa có câu hỏi nào.
+            </div>
+            {% endfor %}
+            
+            {% if questions %}
+            <div class="text-center mt-4 mb-4">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="bi bi-check-circle"></i> Nộp Bài
+                </button>
+            </div>
+            {% endif %}
+        </form>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card sticky-top" style="top: 20px;">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Thông Tin Bài Kiểm Tra</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Lần làm thứ:</strong> {{ attempt_number }}</p>
+                <p><strong>Số câu hỏi:</strong> {{ questions|length }}</p>
+                {% if test.time_limit %}
+                <p><strong>Thời gian:</strong> {{ test.time_limit }} phút</p>
+                <div id="timer" class="alert alert-info">
+                    <i class="bi bi-clock"></i> <span id="time-display">{{ test.time_limit }}:00</span>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
-</body>
-</html>
+</div>
+
+{% endblock %}
+
+{% block script %}
+<script>
+    // Timer countdown
+    {% if test.time_limit %}
+    let timeLeft = {{ test.time_limit }} * 60; // seconds
+    const timerDisplay = document.getElementById('time-display');
+    const timeSpentInput = document.getElementById('time_spent');
+    const startTime = Date.now();
+    
+    const timer = setInterval(() => {
+        timeLeft--;
+        const minutes = Math.floor(timeLeft / 60);
+        const seconds = timeLeft % 60;
+        timerDisplay.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        
+        if (timeLeft <= 0) {
+            clearInterval(timer);
+            alert('Hết giờ! Bài làm sẽ được tự động nộp.');
+            document.getElementById('test-form').submit();
+        }
+    }, 1000);
+    
+    // Track time spent
+    document.getElementById('test-form').addEventListener('submit', function() {
+        const timeSpent = Math.floor((Date.now() - startTime) / 1000);
+        timeSpentInput.value = timeSpent;
+    });
+    {% endif %}
+</script>
+{% endblock %}

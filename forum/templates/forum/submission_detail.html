@@ -5,132 +5,86 @@
 
 {% block main %}
 <div class="container mt-4">
-    <nav aria-label="breadcrumb" class="mb-4">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item">
-                <a href="{% url 'forum:index' %}" class="text-decoration-none">
-                    <i class="bi bi-house"></i> Diễn đàn
-                </a>
-            </li>
-            <li class="breadcrumb-item">
-                <a href="{% url 'forum:submissions_history' submission.test_id %}" class="text-decoration-none">
-                    Lịch sử nộp bài
-                </a>
-            </li>
-            <li class="breadcrumb-item active">Chi tiết bài nộp</li>
-        </ol>
-    </nav>
-
     <div class="row">
         <div class="col-lg-8">
             <div class="card shadow-sm">
                 <div class="card-header bg-info text-white">
-                    <h4 class="card-title mb-0">
-                        <i class="bi bi-file-text"></i> Chi Tiết Bài Nộp
+                    <h4 class="mb-0">
+                        <i class="bi bi-file-text"></i> Chi Tiết Bài Nộp #{{ submission.id }}
                     </h4>
                 </div>
                 <div class="card-body">
-                    <!-- Thông tin bài nộp -->
-                    <div class="row mb-4">
-                        <div class="col-md-6">
-                            <h6>Thông tin bài kiểm tra</h6>
-                            <ul class="list-unstyled">
-                                <li><strong>Bài kiểm tra:</strong> {{ submission.test_title }}</li>
-                                <li><strong>Thời gian nộp:</strong> {{ submission.submitted_at }}</li>
-                                <li><strong>Thời gian làm bài:</strong> {{ submission.time_spent }} phút</li>
-                            </ul>
-                        </div>
-                        <div class="col-md-6">
-                            <h6>Kết quả</h6>
-                            <ul class="list-unstyled">
-                                <li>
-                                    <strong>Tổng điểm:</strong> 
-                                    <span class="badge {% if submission.total_score >= 8 %}bg-success{% elif submission.total_score >= 5 %}bg-warning{% else %}bg-danger{% endif %}">
-                                        {{ submission.total_score|default:"Chưa chấm" }}
-                                    </span>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                    <div class="card mt-4">
+                    <!-- Kết quả tổng -->
+                    <div class="card mb-4">
                         <div class="card-header bg-success text-white">
-                            <h5 class="card-title mb-0">
-                                <i class="bi bi-check-circle"></i> Kết Quả Chấm Điểm Tự Động
+                            <h5 class="mb-0">
+                                <i class="bi bi-check-circle"></i> Kết Quả
                             </h5>
                         </div>
                         <div class="card-body">
                             <div class="row text-center">
                                 <div class="col-md-4">
                                     <div class="display-4 fw-bold text-primary">
-                                        {{ submission.total_score|default:0 }}
+                                        {{ submission.total_score }}
                                     </div>
-                                    <div class="text-muted">Điểm đạt được</div>
+                                    <div class="text-muted">Câu đúng</div>
                                 </div>
                                 <div class="col-md-4">
                                     <div class="display-4 fw-bold text-dark">
-                                        {{ answers|length }}
+                                        {{ submission.max_score }}
                                     </div>
                                     <div class="text-muted">Tổng số câu</div>
                                 </div>
                                 <div class="col-md-4">
                                     <div class="display-4 fw-bold text-info">
-                                        {% widthratio submission.total_score answers|length 100 %}%
+                                        {% if submission.max_score > 0 %}
+                                            {% widthratio submission.total_score submission.max_score 100 %}%
+                                        {% else %}
+                                            0%
+                                        {% endif %}
                                     </div>
                                     <div class="text-muted">Tỷ lệ đúng</div>
                                 </div>
                             </div>
-                            
-                            <hr>
-                            
-                            <!-- Chi tiết từng câu hỏi -->
-                            <h6>Chi tiết câu trả lời:</h6>
-                            {% for answer in answers %}
-                            <div class="card mb-2 {% if answer.score == 1 %}border-success{% else %}border-danger{% endif %}">
-                                <div class="card-body py-2">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <strong>Câu {{ forloop.counter }}:</strong>
-                                            {{ answer.question_content|truncatewords:10 }}
-                                        </div>
-                                        <div>
-                                            <span class="badge {% if answer.score == 1 %}bg-success{% else %}bg-danger{% endif %}">
-                                                {% if answer.score == 1 %}Đúng{% else %}Sai{% endif %}
-                                            </span>
-                                            <span class="ms-2">Điểm: {{ answer.score }}/1</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            {% endfor %}
                         </div>
                     </div>
+
                     <!-- Danh sách câu trả lời -->
-                    <h5 class="mb-3">Câu Trả Lời</h5>
+                    <h5 class="mb-3">Chi Tiết Câu Trả Lời</h5>
                     {% for answer in answers %}
-                    <div class="card mb-3">
+                    <div class="card mb-3 {% if answer.is_correct %}border-success{% elif answer.score == 0 %}border-danger{% endif %}">
                         <div class="card-header d-flex justify-content-between align-items-center">
-                            <h6 class="mb-0">Câu {{ forloop.counter }}</h6>
-                            <span class="badge {% if answer.question_type == 'multiple_choice' %}bg-info{% else %}bg-warning{% endif %}">
-                                {{ answer.question_type }}
+                            <div>
+                                <strong>Câu {{ forloop.counter }}</strong>
+                                <span class="badge {% if answer.question_type == 'multiple_choice' %}bg-info{% else %}bg-warning{% endif %} ms-2">
+                                    {% if answer.question_type == 'multiple_choice' %}Trắc nghiệm{% else %}Tự luận{% endif %}
+                                </span>
+                            </div>
+                            <span class="badge {% if answer.score == 1 %}bg-success{% elif answer.score == 0 %}bg-danger{% else %}bg-secondary{% endif %}">
+                                {% if answer.score == 1 %}
+                                    <i class="bi bi-check-circle"></i> Đúng (1/1)
+                                {% elif answer.score == 0 %}
+                                    <i class="bi bi-x-circle"></i> Sai (0/1)
+                                {% else %}
+                                    <i class="bi bi-clock"></i> Chưa chấm
+                                {% endif %}
                             </span>
                         </div>
                         <div class="card-body">
-                            <h6>Câu hỏi:</h6>
+                            <h6 class="text-muted">Câu hỏi:</h6>
                             <p class="mb-3">{{ answer.question_content }}</p>
                             
-                            <h6>Câu trả lời:</h6>
-                            <div class="alert alert-light border">
-                                {{ answer.answer_content }}
+                            <h6 class="text-muted">Câu trả lời của bạn:</h6>
+                            <div class="alert {% if answer.is_correct %}alert-success{% elif answer.score == 0 %}alert-danger{% else %}alert-light{% endif %} mb-3">
+                                {{ answer.answer_content|default:"<em>Chưa trả lời</em>"|safe }}
                             </div>
                             
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <strong>Điểm:</strong>
-                                    <span class="ms-2 {% if answer.score >= 8 %}text-success{% elif answer.score >= 5 %}text-warning{% else %}text-danger{% endif %}">
-                                        {{ answer.score|default:"Chưa chấm" }}
-                                    </span>
+                            {% if answer.question_type == 'multiple_choice' and not answer.is_correct %}
+                                <h6 class="text-muted">Đáp án đúng:</h6>
+                                <div class="alert alert-success">
+                                    {{ answer.correct_answer }}
                                 </div>
-                            </div>
+                            {% endif %}
                         </div>
                     </div>
                     {% empty %}
@@ -147,42 +101,43 @@
         <div class="col-lg-4">
             <div class="card shadow-sm">
                 <div class="card-header bg-primary text-white">
-                    <h5 class="card-title mb-0">
+                    <h5 class="mb-0">
                         <i class="bi bi-info-circle"></i> Thông Tin
                     </h5>
                 </div>
                 <div class="card-body">
                     <div class="mb-3">
-                        <strong>Mã bài nộp:</strong><br>
-                        <code>#{{ submission.id }}</code>
+                        <strong>Bài kiểm tra:</strong><br>
+                        {{ submission.test_title }}
                     </div>
                     
                     <div class="mb-3">
-                        <strong>Trạng thái:</strong><br>
-                        {% if submission.total_score is not None %}
-                        <span class="badge bg-success">Đã chấm</span>
-                        {% else %}
-                        <span class="badge bg-warning">Chờ chấm</span>
-                        {% endif %}
+                        <strong>Lần làm thứ:</strong><br>
+                        {{ submission.attempt_number }}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Thời gian nộp:</strong><br>
+                        {{ submission.created_at|date:"d/m/Y H:i" }}
                     </div>
                     
                     <div class="mb-3">
                         <strong>Thời gian làm bài:</strong><br>
-                        {{ submission.time_spent }} phút
+                        {{ submission.time_spent }} giây
                     </div>
                     
                     <hr>
                     
                     <div class="d-grid gap-2">
-                        <a href="{% url 'forum:submissions_history' submission.test_id %}" class="btn btn-outline-primary">
-                            <i class="bi bi-arrow-left"></i> Quay lại lịch sử
-                        </a>
-                        
-                        {% if request.session.user_id == submission.author_id or request.session.is_teacher %}
-                        <a href="#" class="btn btn-outline-info">
-                            <i class="bi bi-download"></i> Tải bài làm
+                        {% if is_test_author %}
+                        <a href="{% url 'forum:grade_submission' submission.id %}" class="btn btn-warning">
+                            <i class="bi bi-pencil-square"></i> Chấm bài
                         </a>
                         {% endif %}
+
+                        <a href="{% url 'forum:test_detail' submission.test_id %}" class="btn btn-outline-primary">
+                            <i class="bi bi-arrow-left"></i> Quay lại
+                        </a>
                     </div>
                 </div>
             </div>
@@ -190,32 +145,34 @@
             <!-- Thống kê -->
             <div class="card shadow-sm mt-4">
                 <div class="card-header bg-success text-white">
-                    <h5 class="card-title mb-0">
+                    <h5 class="mb-0">
                         <i class="bi bi-graph-up"></i> Thống Kê
                     </h5>
                 </div>
                 <div class="card-body">
-                    <div class="text-center">
-                        <div class="display-6 fw-bold text-primary">
-                            {{ submission.total_score|default:"-" }}/10
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between">
+                            <span>Số câu đúng:</span>
+                            <strong class="text-success">{{ submission.total_score }}</strong>
                         </div>
-                        <div class="text-muted">Tổng điểm</div>
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar bg-success" style="width: {% widthratio submission.total_score submission.max_score 100 %}%">
+                                {% widthratio submission.total_score submission.max_score 100 %}%
+                            </div>
+                        </div>
                     </div>
                     
-                    <hr>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between">
+                            <span>Số câu sai:</span>
+                            <strong class="text-danger">{{ submission.max_score|add:"-"|add:submission.total_score }}</strong>
+                        </div>
+                    </div>
                     
-                    <div class="small">
+                    <div class="mb-3">
                         <div class="d-flex justify-content-between">
-                            <span>Số câu hỏi:</span>
-                            <strong>{{ answers|length }}</strong>
-                        </div>
-                        <div class="d-flex justify-content-between">
-                            <span>Thời gian làm:</span>
-                            <strong>{{ submission.time_spent }} phút</strong>
-                        </div>
-                        <div class="d-flex justify-content-between">
-                            <span>Ngày nộp:</span>
-                            <strong>{{ submission.submitted_at|date:"d/m/Y" }}</strong>
+                            <span>Tổng số câu:</span>
+                            <strong>{{ submission.max_score }}</strong>
                         </div>
                     </div>
                 </div>

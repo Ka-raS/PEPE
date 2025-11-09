@@ -5,11 +5,27 @@
 
 {% block main %}
 <div class="container mt-4">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{% url 'forum:index' %}" class="text-decoration-none">
+                    <i class="bi bi-house"></i> Diễn đàn
+                </a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{% url 'forum:subject_detail' subject_id %}" class="text-decoration-none">
+                    Môn học
+                </a>
+            </li>
+            <li class="breadcrumb-item active">Ngân Hàng Câu Hỏi</li>
+        </ol>
+    </nav>
+
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>
             <i class="bi bi-collection"></i> Ngân Hàng Câu Hỏi
         </h2>
-        <a href="{% url 'forum:create_question' subject_id %}" class="btn btn-primary">
+        <a href="{% url 'forum:create_question' subject_id %}" class="btn btn-primary rounded-btn">
             <i class="bi bi-plus-circle"></i> Thêm Câu Hỏi
         </a>
     </div>
@@ -17,103 +33,231 @@
     <div class="row">
         {% for question in questions %}
         <div class="col-lg-6 mb-4">
-            <div class="card h-100 shadow-sm">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <span class="badge {% if question.type == 'multiple_choice' %}bg-info{% else %}bg-warning{% endif %}">
-                        {{ question.type|title }}
+            <div class="card rounded-card shadow-sm h-100">
+                <div class="card-header rounded-card-header bg-success text-white d-flex justify-content-between align-items-center">
+                    <span class="badge {% if question.type == 'multiple_choice' %}bg-info{% else %}bg-warning{% endif %} fs-6">
+                        {% if question.type == 'multiple_choice' %}
+                            <i class="bi bi-ui-checks"></i> Trắc nghiệm
+                        {% else %}
+                            <i class="bi bi-pencil-square"></i> Tự luận
+                        {% endif %}
                     </span>
-                    <small class="text-muted">{{ question.created_at|date:"d/m/Y" }}</small>
+                    <small class="text-white-50">
+                        <i class="bi bi-calendar"></i> {{ question.created_at|date:"d/m/Y H:i" }}
+                    </small>
                 </div>
                 <div class="card-body">
                     <h6 class="card-title">{{ question.content|truncatewords:20 }}</h6>
                     
                     {% if question.type == 'multiple_choice' %}
-                        <div class="mt-2">
-                            <small class="text-muted">Lựa chọn:</small>
-                            {% with options=question.options|default:"{}" %}
-                                {% if options != "{}" %}
-                                    <div class="small">
-                                        {% for key, value in options.items %}
-                                            <span class="badge bg-light text-dark me-1">{{ key }}: {{ value|truncatewords:3 }}</span>
-                                        {% endfor %}
-                                    </div>
+                        <div class="mt-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-light text-dark">
+                                    <i class="bi bi-list-check"></i> {{ question.options|length }} đáp án
+                                </span>
+                                {% if question.randomize_options %}
+                                    <span class="badge bg-secondary">
+                                        <i class="bi bi-shuffle"></i> Xáo trộn
+                                    </span>
                                 {% endif %}
-                            {% endwith %}
+                            </div>
                         </div>
                     {% else %}
-                        <div class="mt-2">
-                            <small class="text-muted">Giới hạn từ: {{ question.word_limit }}</small>
+                        <div class="mt-3">
+                            <span class="badge bg-light text-dark">
+                                <i class="bi bi-text-paragraph"></i>
+                                Giới hạn: {% if question.word_limit > 0 %}{{ question.word_limit }} từ{% else %}Không giới hạn{% endif %}
+                            </span>
                         </div>
                     {% endif %}
 
-                    {% if question.explanation %}
-                        <p class="card-text small text-muted mt-2">
-                            <strong>Giải thích:</strong> {{ question.explanation|truncatewords:10 }}
-                        </p>
+                    {% if question.attachment_path %}
+                        <div class="mt-2">
+                            <span class="badge bg-info">
+                                <i class="bi bi-paperclip"></i> Có file đính kèm
+                            </span>
+                        </div>
                     {% endif %}
                 </div>
-                <div class="card-footer bg-transparent">
+                <div class="card-footer bg-transparent border-0">
                     <div class="d-flex justify-content-between align-items-center">
-                        <small class="text-muted">ID: {{ question.id }}</small>
-                        <div>
-                            <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" 
-                                    data-bs-target="#questionModal{{ question.id }}">
-                                <i class="bi bi-eye"></i> Xem
-                            </button>
-                        </div>
+                        <small class="text-muted">
+                            <i class="bi bi-hash"></i> ID: {{ question.id }}
+                        </small>
+                        <button class="btn btn-sm btn-outline-primary rounded-btn" data-bs-toggle="modal" 
+                                data-bs-target="#questionModal{{ question.id }}">
+                            <i class="bi bi-eye"></i> Xem chi tiết
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Modal -->
+        <!-- Modal Chi Tiết -->
         <div class="modal fade" id="questionModal{{ question.id }}" tabindex="-1">
             <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Chi Tiết Câu Hỏi</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <div class="modal-content rounded-card">
+                    <div class="modal-header bg-success text-white rounded-card-header">
+                        <h5 class="modal-title">
+                            <i class="bi bi-question-circle"></i> Chi Tiết Câu Hỏi #{{ question.id }}
+                            <span class="badge {% if question.type == 'multiple_choice' %}bg-info{% else %}bg-warning{% endif %} ms-2">
+                                {% if question.type == 'multiple_choice' %}Trắc nghiệm{% else %}Tự luận{% endif %}
+                            </span>
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
-                        <h6>Nội dung:</h6>
-                        <p>{{ question.content }}</p>
+                        <div class="mb-4">
+                            <h6 class="text-primary">
+                                <i class="bi bi-card-text"></i> Nội dung câu hỏi:
+                            </h6>
+                            <div class="alert alert-info">
+                                {{ question.content }}
+                            </div>
+                        </div>
                         
                         {% if question.type == 'multiple_choice' %}
-                            <h6>Lựa chọn:</h6>
+                            <h6 class="text-primary mb-3">
+                                <i class="bi bi-list-check"></i> Các đáp án:
+                            </h6>
                             <div class="list-group">
-                                {% for key, value in question.options.items %}
-                                    <div class="list-group-item">
-                                        <strong>{{ key }}.</strong> {{ value }}
+                                {% for key, option in question.options.items %}
+                                    <div class="list-group-item rounded-list-item {% if option.is_correct %}list-group-item-success{% endif %}">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div>
+                                                <strong>{{ key }}.</strong> {{ option.content }}
+                                            </div>
+                                            {% if option.is_correct %}
+                                                <span class="badge bg-success">
+                                                    <i class="bi bi-check-circle"></i> Đáp án đúng
+                                                </span>
+                                            {% endif %}
+                                        </div>
                                     </div>
                                 {% endfor %}
                             </div>
+                            
+                            {% if question.randomize_options %}
+                                <div class="alert alert-info mt-3 mb-0 rounded-card">
+                                    <i class="bi bi-shuffle"></i> Đáp án sẽ được xáo trộn khi làm bài
+                                </div>
+                            {% endif %}
                         {% else %}
-                            <p><strong>Giới hạn từ:</strong> {{ question.word_limit }}</p>
+                            <div class="card bg-light border-0 rounded-card">
+                                <div class="card-body">
+                                    <h6 class="text-primary">
+                                        <i class="bi bi-info-circle"></i> Thông tin:
+                                    </h6>
+                                    <ul class="list-unstyled mb-0">
+                                        <li class="mb-2">
+                                            <i class="bi bi-pencil-square text-muted"></i>
+                                            <strong>Loại:</strong> Câu hỏi tự luận
+                                        </li>
+                                        <li>
+                                            <i class="bi bi-text-paragraph text-muted"></i>
+                                            <strong>Giới hạn từ:</strong> 
+                                            {% if question.word_limit > 0 %}
+                                                {{ question.word_limit }} từ
+                                            {% else %}
+                                                Không giới hạn
+                                            {% endif %}
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
                         {% endif %}
-                        
-                        {% if question.explanation %}
-                            <h6 class="mt-3">Giải thích:</h6>
-                            <p>{{ question.explanation }}</p>
+
+                        {% if question.attachment_path %}
+                            <div class="mt-4">
+                                <h6 class="text-primary">
+                                    <i class="bi bi-paperclip"></i> File đính kèm:
+                                </h6>
+                                <a href="{{ MEDIA_URL }}{{ question.attachment_path }}" 
+                                   class="btn btn-outline-info rounded-btn" target="_blank">
+                                    <i class="bi bi-download"></i> Tải xuống file
+                                </a>
+                            </div>
                         {% endif %}
+
+                        <div class="alert alert-light mt-4 rounded-card">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <small class="text-muted">
+                                        <i class="bi bi-calendar-plus"></i> <strong>Ngày tạo:</strong><br>
+                                        {{ question.created_at|date:"d/m/Y H:i" }}
+                                    </small>
+                                </div>
+                                <div class="col-md-6">
+                                    <small class="text-muted">
+                                        <i class="bi bi-hash"></i> <strong>Mã câu hỏi:</strong><br>
+                                        #{{ question.id }}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                        <button type="button" class="btn btn-secondary rounded-btn" data-bs-dismiss="modal">
+                            <i class="bi bi-x-circle"></i> Đóng
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
         {% empty %}
         <div class="col-12">
-            <div class="text-center py-5">
-                <i class="bi bi-question-circle display-1 text-muted"></i>
-                <h4 class="text-muted mt-3">Chưa có câu hỏi nào</h4>
-                <p class="text-muted">Hãy tạo câu hỏi đầu tiên cho môn học này</p>
-                <a href="{% url 'forum:create_question' subject_id %}" class="btn btn-primary">
-                    <i class="bi bi-plus-circle"></i> Tạo Câu Hỏi Đầu Tiên
-                </a>
+            <div class="card rounded-card shadow-sm">
+                <div class="card-body text-center py-5">
+                    <i class="bi bi-question-circle display-1 text-muted"></i>
+                    <h4 class="text-muted mt-3">Chưa có câu hỏi nào</h4>
+                    <p class="text-muted">Hãy tạo câu hỏi đầu tiên cho môn học này</p>
+                    <a href="{% url 'forum:create_question' subject_id %}" class="btn btn-primary rounded-btn">
+                        <i class="bi bi-plus-circle"></i> Tạo Câu Hỏi Đầu Tiên
+                    </a>
+                </div>
             </div>
         </div>
         {% endfor %}
     </div>
 </div>
+{% endblock %}
+
+{% block style %}
+<style>
+.card {
+    border: none;
+    transition: transform 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.modal-content {
+    border: none;
+}
+
+.modal-header {
+    border-bottom: none;
+}
+
+.modal-footer {
+    border-top: none;
+}
+
+.list-group-item {
+    background: transparent;
+    border: 1px solid rgba(0,0,0,.125);
+    margin-bottom: 8px;
+}
+
+.list-group-item.list-group-item-success {
+    background-color: rgba(25, 135, 84, 0.1) !important;
+    border-color: rgba(25, 135, 84, 0.2);
+}
+
+.btn-close-white {
+    filter: brightness(0) invert(1);
+}
+</style>
 {% endblock %}
