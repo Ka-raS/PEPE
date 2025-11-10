@@ -12,28 +12,15 @@ def index(request):
             # Đếm users
             cursor.execute("SELECT COUNT(*) FROM users")
             context['user_count'] = cursor.fetchone()[0]
-        return render(request, 'home/index.html', context)
+
+    else:    
+        # USER ĐÃ ĐĂNG NHẬP
+        context = {
+            'is_authenticated': True,
+            'username': request.session.get('username'),
+        }
     
-    # USER ĐÃ ĐĂNG NHẬP
-    context = {
-        'is_authenticated': True,
-        'username': request.session.get('username'),
-    }
-        
-    # Query chỉ dữ liệu cần thiết
     with connection.cursor() as cursor:
-        # Lấy major_name cho phần gợi ý
-        if request.session.get('user_type') == 'student':
-            cursor.execute("""
-                SELECT m.name
-                FROM students s
-                LEFT JOIN majors m ON s.major_id = m.id
-                WHERE s.id = %s
-            """, [user_id])
-            
-            row = cursor.fetchone()
-            context['major_name'] = row[0] if row else None
-    
         # Tìm 5 Bài đăng tài liệu làm gợi ý
         cursor.execute("""
             SELECT p.id, p.title, p.content, s.name, COALESCE(p.updated_at, p.created_at) as updated_at 

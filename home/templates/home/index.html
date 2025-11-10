@@ -14,13 +14,7 @@
           <h5 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Gợi ý cho bạn</h5>
         </div>
         <div class="card-body">
-          <p class="text-muted">
-            {% if major_name %}
-            Tài liệu thuộc chuyên ngành <strong>{{ major_name }}</strong> có thể bạn quan tâm:
-            {% else %}
-            Một số tài liệu mới được tải lên:
-            {% endif %}
-          </p>
+          <p class="text-muted">Một số tài liệu mới được tải lên:</p>
           <div class="list-group">
             {% for post in suggested_posts %}
             <a href="{% url 'forum:post_detail' post.id %}" class="list-group-item list-group-item-action border-0 rounded-list-item">
