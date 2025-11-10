@@ -5,87 +5,131 @@
 
 {% block main %}
 
-<div class="row">
-    <div class="col-md-8">
-        <h2>{{ test.title }}</h2>
-        <p class="text-muted">Lần làm thứ {{ attempt_number }}</p>
-        
-        <form method="POST" id="test-form">
-            {% csrf_token %}
-            <input type="hidden" name="time_spent" id="time_spent" value="0">
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <h2>{{ test.title }}</h2>
+            <p class="text-muted">Lần làm thứ {{ attempt_number }}</p>
             
-            {% for question in questions %}
-            <div class="card mb-4">
-                <div class="card-body">
-                    <h5 class="card-title">Câu {{ forloop.counter }}</h5>
-                    <p class="card-text">{{ question.content }}</p>
-                    
-                    {% if question.type == 'multiple_choice' %}
-                        {% if question.options %}
-                            {% for key, option in question.options.items %}
-                            <div class="form-check mb-2">
-                                <input class="form-check-input" type="radio" 
-                                       name="answer_{{ question.id }}" 
-                                       value="{{ option.id }}" 
-                                       id="option_{{ question.id }}_{{ key }}">
-                                <label class="form-check-label" for="option_{{ question.id }}_{{ key }}">
-                                    <strong>{{ key }}.</strong> {{ option.content }}
-                                </label>
-                            </div>
-                            {% endfor %}
-                        {% else %}
-                            <p class="text-warning">Không có phương án nào</p>
-                        {% endif %}
+            <form method="POST" id="test-form">
+                {% csrf_token %}
+                <input type="hidden" name="time_spent" id="time_spent" value="0">
+                
+                {% for question in questions %}
+                <div class="card shadow-sm mb-4 rounded-card">
+                    <div class="card-body">
+                        <h5 class="card-title">Câu {{ forloop.counter }}</h5>
+                        <p class="card-text">{{ question.content }}</p>
                         
-                    {% elif question.type == 'essay' %}
-                        <div class="form-group mt-3">
-                            <textarea class="form-control" name="answer_{{ question.id }}" 
-                                      rows="4" placeholder="Nhập câu trả lời của bạn..."
-                                      {% if question.word_limit > 0 %}maxlength="{{ question.word_limit }}"{% endif %}></textarea>
-                            {% if question.word_limit > 0 %}
-                            <small class="form-text text-muted">
-                                Giới hạn: {{ question.word_limit }} từ
-                            </small>
+                        {% if question.type == 'multiple_choice' %}
+                            {% if question.options %}
+                                {% for key, option in question.options.items %}
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="radio" 
+                                           name="answer_{{ question.id }}" 
+                                           value="{{ option.id }}" 
+                                           id="option_{{ question.id }}_{{ key }}">
+                                    <label class="form-check-label" for="option_{{ question.id }}_{{ key }}">
+                                        <strong>{{ key }}.</strong> {{ option.content }}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="alert alert-warning rounded-card">
+                                    Không có phương án nào
+                                </div>
                             {% endif %}
-                        </div>
-                    {% endif %}
+                            
+                        {% elif question.type == 'essay' %}
+                            <div class="form-group mt-3">
+                                <textarea class="form-control" name="answer_{{ question.id }}" 
+                                          rows="4" placeholder="Nhập câu trả lời của bạn..."
+                                          {% if question.word_limit > 0 %}maxlength="{{ question.word_limit }}"{% endif %}></textarea>
+                                {% if question.word_limit > 0 %}
+                                <small class="form-text text-muted">
+                                    Giới hạn: {{ question.word_limit }} từ
+                                </small>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                    </div>
                 </div>
-            </div>
-            {% empty %}
-            <div class="alert alert-warning">
-                Bài kiểm tra này chưa có câu hỏi nào.
-            </div>
-            {% endfor %}
-            
-            {% if questions %}
-            <div class="text-center mt-4 mb-4">
-                <button type="submit" class="btn btn-primary btn-lg">
-                    <i class="bi bi-check-circle"></i> Nộp Bài
-                </button>
-            </div>
-            {% endif %}
-        </form>
-    </div>
-    
-    <div class="col-md-4">
-        <div class="card sticky-top" style="top: 20px;">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0">Thông Tin Bài Kiểm Tra</h5>
-            </div>
-            <div class="card-body">
-                <p><strong>Lần làm thứ:</strong> {{ attempt_number }}</p>
-                <p><strong>Số câu hỏi:</strong> {{ questions|length }}</p>
-                {% if test.time_limit %}
-                <p><strong>Thời gian:</strong> {{ test.time_limit }} phút</p>
-                <div id="timer" class="alert alert-info">
-                    <i class="bi bi-clock"></i> <span id="time-display">{{ test.time_limit }}:00</span>
+                {% empty %}
+                <div class="alert alert-warning rounded-card">
+                    Bài kiểm tra này chưa có câu hỏi nào.
+                </div>
+                {% endfor %}
+                
+                {% if questions %}
+                <div class="text-center mt-4 mb-4">
+                    <button type="submit" class="btn btn-primary btn-lg rounded-btn">
+                        <i class="bi bi-check-circle"></i> Nộp Bài
+                    </button>
                 </div>
                 {% endif %}
+            </form>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card shadow-sm sticky-top rounded-card" style="top: 20px;">
+                <div class="card-header bg-primary text-white rounded-card-header">
+                    <h5 class="mb-0">Thông Tin Bài Kiểm Tra</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Lần làm thứ:</strong> {{ attempt_number }}</p>
+                    <p><strong>Số câu hỏi:</strong> {{ questions|length }}</p>
+                    {% if test.time_limit %}
+                    <p><strong>Thời gian:</strong> {{ test.time_limit }} phút</p>
+                    <div id="timer" class="alert alert-info rounded-card">
+                        <i class="bi bi-clock"></i> <span id="time-display">{{ test.time_limit }}:00</span>
+                    </div>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>
 </div>
 
+{% endblock %}
+
+{% block style %}
+<style>
+.card {
+    border: none;
+    border-radius: 15px;
+    transition: transform 0.2s ease-in-out;
+}
+.card:hover {
+    transform: translateY(-2px);
+}
+.card-header {
+    border-radius: 15px 15px 0 0 !important;
+    border: none;
+}
+.btn {
+    border-radius: 10px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+.btn-primary {
+    background: linear-gradient(135deg, #0d6efd, #0a58ca);
+    border: none;
+}
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(13, 110, 253, 0.4);
+}
+.alert {
+    border-radius: 10px;
+    border: none;
+}
+.progress {
+    border-radius: 10px;
+}
+.badge {
+    font-size: 0.75em;
+}
+</style>
 {% endblock %}
 
 {% block script %}

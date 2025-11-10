@@ -1502,13 +1502,25 @@ def submissions_history(request, test_id):
             raise Http404("Bài kiểm tra không tồn tại")
         test_title = test_row[0]
         
-        # Lấy danh sách submissions
-        cursor.execute("""
-            SELECT id, created_at, time_spent, attempt_number
-            FROM submissions
-            WHERE test_id = %s AND author_id = %s
-            ORDER BY created_at DESC
-        """, [test_id, user_id])
+        # Nếu người dùng là author của bài kiểm tra, lấy tất cả submissions
+        cursor.execute("SELECT author_id FROM tests WHERE id = %s", [test_id])
+        is_test_author = (cursor.fetchone()[0] == user_id)
+        if is_test_author:
+            cursor.execute("""
+                SELECT id, created_at, time_spent, attempt_number, author_id
+                FROM submissions
+                WHERE test_id = %s
+                ORDER BY created_at DESC
+            """, [test_id])
+
+        else:
+            # Chỉ lấy danh sách submissions của người dùng 
+            cursor.execute("""
+                SELECT id, created_at, time_spent, attempt_number
+                FROM submissions
+                WHERE test_id = %s AND author_id = %s
+                ORDER BY created_at DESC
+            """, [test_id, user_id])
         
         submissions = []
         for row in cursor.fetchall():

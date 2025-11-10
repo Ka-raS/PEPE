@@ -34,3 +34,11 @@ A web forum
     ```bash
     $ python manage.py runserver
     ```
+
+## Users in `example.sqlite3`
+
+| Username        | Password  |
+|-----------------|-----------|
+| student         | 000000    |
+| anotherstudent  | 000000    |
+| teacher         | 000000    |

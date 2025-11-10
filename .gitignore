@@ -2,7 +2,7 @@
 .vscode/
 **/__pycache__/
 
-media/
-example.sqlite3
+# media/
+# example.sqlite3
 
 Abbey Road

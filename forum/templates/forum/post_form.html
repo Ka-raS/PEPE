@@ -47,7 +47,7 @@
           <div class="mb-4">
             <label for="id_subject" class="form-label fw-semibold fs-6"><i class="bi bi-book me-2 text-primary"></i>Môn học</label>
             <select name="subject" id="id_subject" class="form-select" required>
-              <option value="">{% if post.subject.name %}{{ post.subject.name }}{% else %}-- Chọn Môn học --{% endif %}</option>
+              <option value="">-- Chọn Môn học --</option>
               {% for subject in subjects %}
               <option value="{{ subject.id }}" {% if subject.id == selected_subject_id or subject.id|stringformat:"s" == form_data.subject %}selected{% endif %}>{{ subject.name }}</option>
               {% endfor %}
