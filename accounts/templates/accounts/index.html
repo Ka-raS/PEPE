@@ -124,13 +124,13 @@
                     <select name="enrollment_year" class="form-control rounded-input">
                       <option value="">-- Chọn năm --</option>
                       {% for i in "123456" %}
-                      <option value="{{ i }}" {% if year_of_study|stringformat:"s" == i %}selected{% endif %}>Năm {{ i }}</option>
+                      <option value="{{ i }}" {% if enrollment_year|stringformat:"s" == i %}selected{% endif %}>Năm {{ i }}</option>
                       {% endfor %}
                     </select>
                   {% else %}
                     <p class="info-value">
-                      {% if year_of_study %}
-                        Năm {{ year_of_study }}
+                      {% if enrollment_year %}
+                        Năm {{ enrollment_year }}
                       {% else %}
                         Chưa cập nhật
                       {% endif %}

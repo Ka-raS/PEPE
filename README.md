@@ -7,6 +7,15 @@
 | ![Test](       /media/screenshots/forum_test_detail.png) | ![Take Test](  /media/screenshots/forum_take_test.png)        |
 | ![Create Test](/media/screenshots/forum_test_form.png)   | ![Grade Test]( /media/screenshots/forum_grade_submission.png) |
 
+## Main Features
+
+- User login and registration for students and teachers.
+- Personal profile editing with avatar upload.
+- Subject-based discussion forums.
+- Creating posts with file attachments.
+- Creating tests from the question banks.
+- Grading test's submissions both automatically and manually.
+
 ## Requirements
 
 - [Python 3.12.3](https://www.python.org/downloads/)

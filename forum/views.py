@@ -11,114 +11,29 @@ from django.http import Http404
 from django.shortcuts import render, redirect
 from django.core.files.storage import default_storage
 
+import accounts.sql
+from . import sql
+
+
 def index(request):
-    try:
-        with connection.cursor() as cursor:
-            cursor.execute("SELECT id, name, description FROM subjects")
-            subjects = cursor.fetchall()
-    except Exception as e:
-        subjects = []
     context = {
-        'subjects': subjects,
+        'subjects': accounts.sql.all_subject(),
         'username': request.session.get('username'),
         'is_authenticated': request.session.get('user_id') is not None
     }
-
     return render(request, 'forum/index.html', context)
 
 def subject_detail(request, subject_id):
     """Chi tiết môn học"""
     
-    # Lấy thông tin môn học
-    with connection.cursor() as cursor:
-        cursor.execute("""
-            SELECT id, name, description
-            FROM subjects
-            WHERE id = %s
-        """, [subject_id])
-        
-        row = cursor.fetchone()
-        if not row:
-            raise Http404("Môn học không tồn tại")
-        
-        subject = {
-            'id': row[0],
-            'name': row[1],
-            'description': row[2]
-        }
-        
-        # Lấy danh sách bài kiểm tra
-        cursor.execute("""
-            SELECT 
-                id, 
-                title, 
-                description,
-                time_limit, 
-                ends_at, 
-                created_at,
-                max_attempts,
-                CASE 
-                    WHEN ends_at IS NULL THEN 1
-                    WHEN datetime(ends_at) > datetime('now') THEN 1
-                    ELSE 0
-                END as is_active
-            FROM tests
-            WHERE subject_id = %s
-            ORDER BY created_at DESC
-        """, [subject_id])
-        
-        tests = [
-            {
-                'id': row[0],
-                'title': row[1],
-                'description': row[2],
-                'time_limit': row[3],
-                'ends_at': row[4],
-                'created_at': row[5],
-                'max_attempts': row[6],
-                'is_active': row[7]
-            }
-            for row in cursor.fetchall()
-        ]
-
-        cursor.execute("""
-            SELECT 
-                p.id, 
-                p.title, 
-                p.content,
-                p.view_count,
-                p.created_at,
-                p.author_id,
-                u.username,
-                COUNT(c.id)
-            FROM posts p
-            LEFT JOIN users u ON p.author_id = u.id
-            LEFT JOIN comments c ON p.id = c.post_id
-            WHERE p.subject_id = %s
-            GROUP BY p.id, p.title, p.content, p.view_count, p.created_at, p.author_id, u.username
-            ORDER BY p.created_at
-        """, [subject_id])
-        
-        posts = [
-            {
-                'id': row[0],
-                'title': row[1],
-                'content': row[2],
-                'view_count': row[3],
-                'created_at': row[4],
-                'author': {
-                    'id': row[5],
-                    'username': row[6]
-                },
-                'comment_count': row[7]
-            }
-            for row in cursor.fetchall()
-        ]
-
-        cursor.execute("SELECT COUNT(*) FROM users")
-        user_count = cursor.fetchone()[0]
-        cursor.execute("SELECT COUNT(*) FROM questions")
-        question_count = cursor.fetchone()[0]
+    subject = accounts.sql.one_subject(subject_id)
+    if not subject:
+        raise Http404("Môn học không tồn tại")
+    
+    tests = sql.subject_tests(subject_id)
+    posts = sql.subject_posts(subject_id)
+    user_count = accounts.sql.user_count()
+    question_count = sql.question_count()
     
     context = {
         'is_authenticated': request.session.get('user_id') is not None,
@@ -141,11 +56,7 @@ def create_post(request):
     
     user_id = request.session['user_id']
     subject_id = request.GET.get('subject_id')
-    
-    # Lấy danh sách subjects
-    with connection.cursor() as cursor:
-        cursor.execute("SELECT id, name FROM subjects ORDER BY name")
-        subjects = [{'id': row[0], 'name': row[1]} for row in cursor.fetchall()]
+    subjects = accounts.sql.all_subject()
     
     if request.method != 'POST':
         context = {
@@ -175,12 +86,8 @@ def create_post(request):
         
     if not subject_id:
         errors.append('Vui lòng chọn môn học')
-    else:
-        # Validate subject_id tồn tại
-        with connection.cursor() as cursor:
-            cursor.execute("SELECT id FROM subjects WHERE id = %s", [subject_id])
-            if not cursor.fetchone():
-                errors.append('Môn học không tồn tại')
+    elif not accounts.sql.one_subject(subject_id):
+        errors.append('Môn học không tồn tại')
     
     if errors:
         for error in errors:
@@ -254,17 +161,12 @@ def create_post(request):
         attachment_path = upload_path
     
     try:
-        with connection.cursor() as cursor:
-            cursor.execute("""
-                INSERT INTO posts (title, content, subject_id, author_id, attachment_path)
-                VALUES (%s, %s, %s, %s, %s)
-            """, [title, content, subject_id, user_id, attachment_path])
-        
+        sql.insert_post(title, content, subject_id, user_id, attachment_path)
         messages.success(request, 'Bài viết đã được đăng thành công!')
         return redirect('forum:subject_detail', subject_id=subject_id)
         
     except Exception as e:
-        # Xóa file nếu insert failed
+        # Xóa file
         if attachment_path:
             try:
                 os.remove(full_path)
@@ -905,7 +807,7 @@ def test_detail(request, test_id):
         cursor.execute("""
             SELECT 
                 id, title, description, time_limit, ends_at, created_at,
-                max_attempts, subject_id,
+                max_attempts, subject_id, author_id,
                 CASE 
                     WHEN ends_at IS NULL THEN 1
                     WHEN datetime(ends_at) > datetime('now') THEN 1
@@ -928,7 +830,8 @@ def test_detail(request, test_id):
             'created_at': row[5],
             'max_attempts': row[6],
             'subject_id': row[7],
-            'is_active': row[8]
+            'author_id': row[8],
+            'is_active': row[9]
         }
     
         user_id = request.session.get('user_id')
@@ -954,6 +857,7 @@ def test_detail(request, test_id):
         'username': request.session.get('username'),
         'is_author': user_id == test.get('author_id')
     }
+    print(user_id, test.get('author_id'))
     return render(request, 'forum/test_detail.html', context)
 
 

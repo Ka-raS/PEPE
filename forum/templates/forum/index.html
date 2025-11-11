@@ -12,15 +12,15 @@
   </div>
 
   <div class="row g-4">
-    {% for id, name, description in subjects %}
+    {% for subject in subjects %}
       <div class="col-md-6 col-lg-4">
         <div class="card shadow-sm border-0 rounded-card h-100">
           <div class="card-body d-flex flex-column">
             <h5 class="card-title">
-              <i class="bi bi-book me-2 text-primary"></i>{{ name }}
+              <i class="bi bi-book me-2 text-primary"></i>{{ subject.name }}
             </h5>
-            <p class="card-text text-muted flex-grow-1">{{ description }}</p>
-            <a href="{% url 'forum:subject_detail' id %}" class="btn btn-primary rounded-btn mt-auto">
+            <p class="card-text text-muted flex-grow-1">{{ subject.description }}</p>
+            <a href="{% url 'forum:subject_detail' subject.id %}" class="btn btn-primary rounded-btn mt-auto">
               <i class="bi bi-arrow-right-circle me-1"></i>Truy cập diễn đàn
             </a>
           </div>
