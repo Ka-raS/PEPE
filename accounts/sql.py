@@ -6,14 +6,24 @@ def user_count():
         cursor.execute("SELECT COUNT(*) FROM users")
         return cursor.fetchone()[0]
 
-def one_user(user_id='NULL', username='NULL', email='NULL'):
+
+# PRESENT
+def one_user(user_id=None, username=None, email=None):
+    query_conditions = []
+    if user_id is not None:
+        query_conditions.append("id = %s")
+    if username is not None:
+        query_conditions.append("username = %s")
+    if email is not None:
+        query_conditions.append("email = %s")
+
     with connection.cursor() as cursor:
-        cursor.execute("""
-            SELECT * FROM users 
-            WHERE id = %s
-            OR username = %s
-            OR email = %s
-        """, [user_id, username, email])
+        cursor.execute(f"""
+            SELECT id, username, password, email, first_name, last_name, avatar_path
+            FROM users 
+            WHERE {' OR '.join(query_conditions)}
+        """, [i for i in (user_id, username, email) if i is not None])
+
         row = cursor.fetchone()
         return {
             'id': row[0],
@@ -58,6 +68,7 @@ def one_teacher(user_id):
             'teacher_code': row[4]
         } if row else None
 
+# PRESENT
 def insert_user(username, email, password, first_name, last_name, user_type):
     with connection.cursor() as cursor:
         cursor.execute("""
@@ -112,6 +123,7 @@ def update_student(user_id, major_id, enrollment_year, student_code):
 def update_teacher(user_id, title, teacher_code, degree, department_id):
     with connection.cursor() as cursor:
         cursor.execute("SELECT id FROM teachers WHERE id = %s", [user_id])
+
         if cursor.fetchone():
             cursor.execute("""
                 UPDATE teachers 
@@ -188,7 +200,7 @@ def user_test_count(user_id):
 
 
 def user_recent_submissions(user_id, count):
-    if count < 0: count = 'NULL'
+    count = max(count, -1)
     with connection.cursor() as cursor:
         cursor.execute("""
             SELECT t.title, s.created_at
@@ -206,8 +218,9 @@ def user_recent_submissions(user_id, count):
             for row in cursor.fetchall()
         ]
     
+# PRESENT
 def user_recent_posts(user_id, count):
-    if count < 0: count = 'NULL'
+    count = max(count, -1)
     with connection.cursor() as cursor:
         cursor.execute("""
             SELECT title, created_at 
@@ -216,7 +229,7 @@ def user_recent_posts(user_id, count):
             ORDER BY created_at DESC
             LIMIT %s
         """, [user_id, count])
-        return [
+        return [    
             {
                 'title': row[0],
                 'created_at': row[1]
@@ -225,7 +238,7 @@ def user_recent_posts(user_id, count):
         ]
     
 def user_recent_tests(user_id, count):
-    if count < 0: count = 'NULL'
+    count = max(count, -1)
     with connection.cursor() as cursor:
         cursor.execute("""
             SELECT title, created_at 

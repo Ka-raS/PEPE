@@ -9,19 +9,17 @@ from django.contrib import messages
 from django.db import connection
 from django.http import Http404
 from django.shortcuts import render, redirect
-from django.core.files.storage import default_storage
 
 import accounts.sql
 from . import sql
 
 
 def index(request):
-    context = {
+    return render(request, 'forum/index.html', {
         'subjects': accounts.sql.all_subject(),
         'username': request.session.get('username'),
         'is_authenticated': request.session.get('user_id') is not None
-    }
-    return render(request, 'forum/index.html', context)
+    })
 
 def subject_detail(request, subject_id):
     """Chi tiết môn học"""
@@ -665,7 +663,7 @@ def vote_post(request, post_id):
             else:
                 # Nếu khác -> update vote
                 cursor.execute("""
-                    UPDATE votes 
+                    UPDATE votes
                     SET vote_value = %s 
                     WHERE voter_id = %s AND post_id = %s
                 """, [vote_value, user_id, post_id])
@@ -857,7 +855,6 @@ def test_detail(request, test_id):
         'username': request.session.get('username'),
         'is_author': user_id == test.get('author_id')
     }
-    print(user_id, test.get('author_id'))
     return render(request, 'forum/test_detail.html', context)
 
 

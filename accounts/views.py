@@ -78,16 +78,16 @@ def index(request):
     # --- XỬ LÝ GET (Hiển thị thông tin) ---
     try:
         # Lấy thông tin chung
-        user_base = sql.one_user(user_id=user_id)
-        if not user_base:
-            raise Http404("Môn học không tồn tại")
+        user_data = sql.one_user(user_id=user_id)
+        if not user_data:
+            raise Http404("Không tìm thấy người dùng.")
             
-        context['username'] = user_base['username']
-        context['email'] = user_base['email']
-        context['first_name'] = user_base['first_name'] or ''
-        context['last_name'] = user_base['last_name'] or ''
+        context['username'] = user_data['username']
+        context['email'] = user_data['email']
+        context['first_name'] = user_data['first_name'] or ''
+        context['last_name'] = user_data['last_name'] or ''
         context['full_name'] = f"{context['first_name']} {context['last_name']}".strip()
-        context['avatar_path'] = f"{user_base['avatar_path']}" if user_base['avatar_path'] else None
+        context['avatar_path'] = f"{user_data['avatar_path']}" if user_data['avatar_path'] else None
 
         if user_type == 'student':
             student_data = sql.one_student(user_id)
@@ -201,7 +201,7 @@ def register_view(request):
     
     try:
         # Kiểm tra user đã tồn tại
-        if sql.is_user_exist(username, email):
+        if sql.one_user(username, email):
             messages.error(request, 'Tên đăng nhập hoặc email đã tồn tại')
             return render(request, 'accounts/register.html')
         

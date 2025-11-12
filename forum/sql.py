@@ -6,6 +6,7 @@ def question_count():
         cursor.execute("SELECT COUNT(*) FROM questions")
         return cursor.fetchone()[0]
 
+# PRESENT
 def subject_tests(subject_id):
     with connection.cursor() as cursor:
         cursor.execute("""
@@ -26,7 +27,7 @@ def subject_tests(subject_id):
             WHERE subject_id = %s
             ORDER BY created_at DESC
         """, [subject_id])
-        
+
         return [
             {
                 'id': row[0],
@@ -78,9 +79,7 @@ def subject_posts(subject_id):
         ]
     
 def posts_with_attachment(count):
-    if count < 0:
-        count = 'NULL'
-
+    count = max(count, -1)
     with connection.cursor() as cursor:
         cursor.execute("""
             SELECT p.id, p.title, p.content, s.name, COALESCE(p.updated_at, p.created_at) as updated_at 
@@ -102,9 +101,7 @@ def posts_with_attachment(count):
         ]
     
 def popular_posts(count):
-    if count < 0:
-        count = 'NULL'
-
+    count = max(count, -1)
     with connection.cursor() as cursor:
         cursor.execute("""
             SELECT 
@@ -139,9 +136,7 @@ def popular_posts(count):
         ]
     
 def latest_posts(count):
-    if (count < 0):
-        count = 'NULL'
-
+    count = max(count, -1)
     with connection.cursor() as cursor:
         cursor.execute("""
             SELECT 
@@ -175,10 +170,9 @@ def latest_posts(count):
             for row in cursor.fetchall()
         ]
     
+# PRESENT
 def latest_tests(count):
-    if count < 0:
-        count = 'NULL'
-
+    count = max(count, -1)
     with connection.cursor() as cursor:
         cursor.execute("""
             SELECT 
