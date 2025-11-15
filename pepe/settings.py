@@ -26,6 +26,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = [
     'pepe-ptit.pythonanywhere.com',
+    'pepe-ptit.onrender.com',
     'localhost',
     '127.0.0.1'
 ]
