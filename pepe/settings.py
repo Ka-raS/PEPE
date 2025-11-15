@@ -25,7 +25,7 @@ SECRET_KEY = "django-insecure-_46x$-rh6(x%8j+*0s*c62)vv^&lx9z6w(9p%ksiod_ll+mz%#
 DEBUG = True
 
 ALLOWED_HOSTS = [
-    'pepe-ptit.onrender.com',
+    'pepe-ptit.pythonanywhere.com',
     'localhost',
     '127.0.0.1'
 ]
