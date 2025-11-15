@@ -10,7 +10,7 @@
     </li>
     {% if post %}
     <li class="breadcrumb-item">
-      <a href="{% url 'forum:subject_detail' post.subject.id }}" class="text-decoration-none">{{ post.subject.name }}</a>
+      <a href="{% url 'forum:subject_detail' post.subject.id %}" class="text-decoration-none">{{ post.subject.name }}</a>
     </li>
     <li class="breadcrumb-item">
       <a href="{% url 'forum:post_detail' post.id %}" class="text-decoration-none">{{ post.title|truncatewords:5 }}</a>
