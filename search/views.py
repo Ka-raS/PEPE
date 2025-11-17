@@ -97,7 +97,36 @@ def search_users(request):
 
 def search_posts(request):
     query = request.GET.get('q', '').strip()
-    results = _search_posts(query, detailed=True) if query else []
+    subject_filter = request.GET.get('subject', '')
+    author_filter = request.GET.get('author', '')
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    search_in = request.GET.getlist('search_in')
+    sort_by = request.GET.get('sort', 'created_at')
+    min_views = request.GET.get('min_views', '')
+    min_comments = request.GET.get('min_comments', '')
+    
+    # Only search if there's a query
+    if query:
+        results = _search_posts(
+            query, 
+            detailed=True,
+            subject_filter=subject_filter,
+            author_filter=author_filter,
+            date_from=date_from,
+            date_to=date_to,
+            search_in=search_in,
+            sort_by=sort_by,
+            min_views=min_views,
+            min_comments=min_comments
+        )
+    else:
+        results = []
+
+    # Get subjects for filter dropdown
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT id, name FROM subjects ORDER BY name")
+        subjects = [dict(zip(['id', 'name'], row)) for row in cursor.fetchall()]
 
     paginator = Paginator(results, 10)
     page = request.GET.get('page', 1)
@@ -107,14 +136,37 @@ def search_posts(request):
         'current_tab': 'posts',
         'posts': paginator.get_page(page),
         'posts_count': len(results),
-        'total_count': len(results)
+        'total_count': len(results),
+        'subjects': subjects,
+        'search_in': search_in,
     }
     
     return render(request, 'search/search_posts.html', context)
 
 def search_tests(request):
     query = request.GET.get('q', '').strip()
-    results = _search_tests(query, detailed=True) if query else []
+    subject_filter = request.GET.get('subject', '')
+    author_filter = request.GET.get('author', '')
+    time_limit_filter = request.GET.get('time_limit', '')
+    sort_by = request.GET.get('sort', 'created_at')
+    
+    # Only search if there's a query
+    if query:
+        results = _search_tests(
+            query, 
+            detailed=True,
+            subject_filter=subject_filter,
+            author_filter=author_filter,
+            time_limit_filter=time_limit_filter,
+            sort_by=sort_by
+        )
+    else:
+        results = []
+
+    # Get subjects for filter dropdown
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT id, name FROM subjects ORDER BY name")
+        subjects = [dict(zip(['id', 'name'], row)) for row in cursor.fetchall()]
 
     paginator = Paginator(results, 10)
     page = request.GET.get('page', 1)
@@ -124,7 +176,8 @@ def search_tests(request):
         'current_tab': 'tests',
         'tests': paginator.get_page(page),
         'tests_count': len(results),
-        'total_count': len(results)
+        'total_count': len(results),
+        'subjects': subjects
     }
     
     return render(request, 'search/search_tests.html', context)
@@ -258,59 +311,167 @@ def _search_users(query, detailed=False, **filters):
         cursor.execute(final_query, params)
         columns = [col[0] for col in cursor.description]
         return [dict(zip(columns, row)) for row in cursor.fetchall()]
-    
-def _search_posts(query, detailed=False):
+
+def _search_posts(query, detailed=False, **filters):
     with connection.cursor() as cursor:
-        if detailed:
-            cursor.execute("""
-                SELECT p.id, p.title, p.content, p.created_at, p.view_count,
-                       u.username as author_name, s.name as subject_name,
-                       (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id) as comment_count,
-                       (SELECT COALESCE(SUM(v.vote_value), 0) FROM votes v WHERE v.post_id = p.id) as vote_score
-                FROM posts p
-                JOIN users u ON p.author_id = u.id
-                JOIN subjects s ON p.subject_id = s.id
-                WHERE p.title LIKE %s OR p.content LIKE %s
-                ORDER BY p.created_at DESC
-            """, [f'%{query}%', f'%{query}%'])
-        else:
-            cursor.execute("""
-                SELECT p.id, p.title, p.content, p.created_at, p.view_count,
-                       u.username as author_name, s.name as subject_name
-                FROM posts p
-                JOIN users u ON p.author_id = u.id
-                JOIN subjects s ON p.subject_id = s.id
-                WHERE p.title LIKE %s OR p.content LIKE %s
-                ORDER BY p.created_at DESC
-            """, [f'%{query}%', f'%{query}%'])
+        # Base query
+        base_query = """
+            SELECT p.id, p.title, p.content, p.created_at, p.view_count, p.updated_at,
+                   u.username as author_name, u.id as author_id,
+                   s.name as subject_name, s.id as subject_id,
+                   (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id) as comment_count,
+                   (SELECT COALESCE(SUM(v.vote_value), 0) FROM votes v WHERE v.post_id = p.id) as vote_score
+            FROM posts p
+            JOIN users u ON p.author_id = u.id
+            JOIN subjects s ON p.subject_id = s.id
+        """
         
+        # Build WHERE conditions
+        where_conditions = []
+        params = []
+
+        # Search conditions
+        if query:
+            search_parts = []
+            search_in = filters.get('search_in', ['title', 'content'])
+            
+            if not search_in:
+                search_in = ['title', 'content']
+            
+            if 'title' in search_in:
+                search_parts.append("p.title LIKE %s")
+                params.append(f'%{query}%')
+            if 'content' in search_in:
+                search_parts.append("p.content LIKE %s")
+                params.append(f'%{query}%')
+            if 'author' in search_in:
+                search_parts.append("u.username LIKE %s")
+                params.append(f'%{query}%')
+            
+            if search_parts:
+                where_conditions.append(f"({' OR '.join(search_parts)})")
+        else:
+            where_conditions.append("1=0")
+
+        # Subject filter
+        subject_filter = filters.get('subject_filter')
+        if subject_filter:
+            where_conditions.append("p.subject_id = %s")
+            params.append(subject_filter)
+
+        # Author filter
+        author_filter = filters.get('author_filter')
+        if author_filter:
+            where_conditions.append("p.author_id = %s")
+            params.append(author_filter)
+
+        # Date range filter
+        date_from = filters.get('date_from')
+        date_to = filters.get('date_to')
+        if date_from:
+            where_conditions.append("DATE(p.created_at) >= %s")
+            params.append(date_from)
+        if date_to:
+            where_conditions.append("DATE(p.created_at) <= %s")
+            params.append(date_to)
+
+        # Minimum views filter
+        min_views = filters.get('min_views')
+        if min_views:
+            where_conditions.append("p.view_count >= %s")
+            params.append(min_views)
+
+        # Minimum comments filter
+        min_comments = filters.get('min_comments')
+        if min_comments:
+            where_conditions.append("(SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id) >= %s")
+            params.append(min_comments)
+
+        # Build final query
+        where_clause = " WHERE " + " AND ".join(where_conditions) if where_conditions else ""
+        
+        # Sorting
+        sort_by = filters.get('sort_by', 'created_at')
+        sort_mapping = {
+            'created_at': 'p.created_at DESC',
+            'updated_at': 'p.updated_at DESC',
+            'view_count': 'p.view_count DESC',
+            'comment_count': 'comment_count DESC',
+            'vote_score': 'vote_score DESC',
+            'title': 'p.title ASC'
+        }
+        order_clause = " ORDER BY " + sort_mapping.get(sort_by, 'p.created_at DESC')
+
+        final_query = base_query + where_clause + order_clause
+        
+        cursor.execute(final_query, params)
         columns = [col[0] for col in cursor.description]
         return [dict(zip(columns, row)) for row in cursor.fetchall()]
-
-def _search_tests(query, detailed=False):
+    
+def _search_tests(query, detailed=False, **filters):
     with connection.cursor() as cursor:
-        if detailed:
-            cursor.execute("""
-                SELECT t.id, t.title, t.description, t.time_limit, t.max_attempts, 
-                       t.created_at, t.ends_at, u.username as author_name, 
-                       s.name as subject_name,
-                       (SELECT COUNT(*) FROM test_questions tq WHERE tq.test_id = t.id) as question_count
-                FROM tests t
-                JOIN users u ON t.author_id = u.id
-                JOIN subjects s ON t.subject_id = s.id
-                WHERE t.title LIKE %s OR t.description LIKE %s
-                ORDER BY t.created_at DESC
-            """, [f'%{query}%', f'%{query}%'])
-        else:
-            cursor.execute("""
-                SELECT t.id, t.title, t.description, t.time_limit, t.created_at,
-                       u.username as author_name, s.name as subject_name
-                FROM tests t
-                JOIN users u ON t.author_id = u.id
-                JOIN subjects s ON t.subject_id = s.id
-                WHERE t.title LIKE %s OR t.description LIKE %s
-                ORDER BY t.created_at DESC
-            """, [f'%{query}%', f'%{query}%'])
+        # Base query
+        base_query = """
+            SELECT 
+                t.id, t.title, t.description, t.time_limit, t.max_attempts, 
+                t.created_at, t.ends_at, u.username as author_name, 
+                s.name as subject_name,
+                (SELECT COUNT(*) FROM test_questions tq WHERE tq.test_id = t.id) as question_count
+            FROM tests t
+            JOIN users u ON t.author_id = u.id
+            JOIN subjects s ON t.subject_id = s.id
+        """
         
+        # Build WHERE conditions
+        where_conditions = []
+        params = []
+
+        # Search conditions
+        if query:
+            where_conditions.append("(t.title LIKE %s OR t.description LIKE %s)")
+            params.extend([f'%{query}%', f'%{query}%'])
+        else:
+            where_conditions.append("1=0")
+
+        # Subject filter
+        subject_filter = filters.get('subject_filter')
+        if subject_filter:
+            where_conditions.append("t.subject_id = %s")
+            params.append(subject_filter)
+
+        # Author filter
+        author_filter = filters.get('author_filter')
+        if author_filter:
+            where_conditions.append("t.author_id = %s")
+            params.append(author_filter)
+
+        # Time limit filter
+        time_limit_filter = filters.get('time_limit_filter')
+        if time_limit_filter:
+            if time_limit_filter == 'short':
+                where_conditions.append("t.time_limit <= 30")
+            elif time_limit_filter == 'medium':
+                where_conditions.append("t.time_limit > 30 AND t.time_limit <= 60")
+            elif time_limit_filter == 'long':
+                where_conditions.append("t.time_limit > 60")
+
+        # Build final query
+        where_clause = " WHERE " + " AND ".join(where_conditions) if where_conditions else ""
+        
+        # Sorting
+        sort_by = filters.get('sort_by', 'created_at')
+        sort_mapping = {
+            'title': 't.title',
+            'created_at': 't.created_at DESC',
+            'time_limit': 't.time_limit',
+            'question_count': 'question_count DESC',
+            'author': 'u.username'
+        }
+        sort_field = sort_mapping.get(sort_by, 't.created_at DESC')
+        order_clause = f" ORDER BY {sort_field}"
+
+        final_query = base_query + where_clause + order_clause
+        
+        cursor.execute(final_query, params)
         columns = [col[0] for col in cursor.description]
         return [dict(zip(columns, row)) for row in cursor.fetchall()]

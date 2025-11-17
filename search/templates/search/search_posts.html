@@ -1,0 +1,375 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Tìm kiếm Bài viết{% endblock %}
+
+{% block main %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{% url 'home:index' %}" class="text-decoration-none">
+                    <i class="bi bi-house"></i> Trang chủ
+                </a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{% url 'search:index' %}" class="text-decoration-none">Tìm kiếm</a>
+            </li>
+            <li class="breadcrumb-item active">Bài viết</li>
+        </ol>
+    </nav>
+
+    {% include 'search/header.html' %}
+
+    {% if query %}
+    <div class="row">
+        <!-- Filters Sidebar -->
+        <div class="col-lg-3 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-funnel me-1"></i>Bộ lọc
+                    </h6>
+                </div>
+
+                <div class="card-body">
+                    <form method="GET" id="filterForm">
+                        <input type="hidden" name="q" value="{{ query }}">
+
+                        <!-- Subject Filter -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Môn học</label>
+                            <select class="form-select form-select-sm" name="subject">
+                                <option value="">Tất cả môn học</option>
+                                {% for subject in subjects %}
+                                <option value="{{ subject.id }}" {% if request.GET.subject == subject.id|stringformat:"i" %}selected{% endif %}>
+                                    {{ subject.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Date Range Filter -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Khoảng thời gian</label>
+                            <div class="input-group input-group-sm mb-2">
+                                <span class="input-group-text">Từ</span>
+                                <input type="date" class="form-control" name="date_from" value="{{ request.GET.date_from }}">
+                            </div>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text">Đến</span>
+                                <input type="date" class="form-control" name="date_to" value="{{ request.GET.date_to }}">
+                            </div>
+                        </div>
+
+                        <!-- Minimum Views/Comments -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Điều kiện</label>
+                            <div class="input-group input-group-sm mb-2">
+                                <span class="input-group-text">Lượt xem ≥</span>
+                                <input type="number" class="form-control" name="min_views" value="{{ request.GET.min_views }}" min="0" placeholder="0">
+                            </div>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text">Bình luận ≥</span>
+                                <input type="number" class="form-control" name="min_comments" value="{{ request.GET.min_comments }}" min="0" placeholder="0">
+                            </div>
+                        </div>
+
+                        <!-- Search in specific fields -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Tìm từ khóa trong</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="search_in" value="title" 
+                                       id="searchTitle" {% if 'title' in search_in or not search_in %}checked{% endif %}>
+                                <label class="form-check-label" for="searchTitle">
+                                    Tiêu đề
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="search_in" value="content" 
+                                       id="searchContent" {% if 'content' in search_in or not search_in %}checked{% endif %}>
+                                <label class="form-check-label" for="searchContent">
+                                    Nội dung
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="search_in" value="author" 
+                                       id="searchAuthor" {% if 'author' in search_in %}checked{% endif %}>
+                                <label class="form-check-label" for="searchAuthor">
+                                    Tác giả
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Sort Filter -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Sắp xếp theo</label>
+                            <select class="form-select form-select-sm" name="sort">
+                                <option value="created_at" {% if request.GET.sort == 'created_at' %}selected{% endif %}>Ngày đăng mới nhất</option>
+                                <option value="updated_at" {% if request.GET.sort == 'updated_at' %}selected{% endif %}>Ngày cập nhật</option>
+                                <option value="view_count" {% if request.GET.sort == 'view_count' %}selected{% endif %}>Lượt xem nhiều nhất</option>
+                                <option value="comment_count" {% if request.GET.sort == 'comment_count' %}selected{% endif %}>Bình luận nhiều nhất</option>
+                                <option value="vote_score" {% if request.GET.sort == 'vote_score' %}selected{% endif %}>Điểm đánh giá cao nhất</option>
+                                <option value="title" {% if request.GET.sort == 'title' %}selected{% endif %}>Tiêu đề</option>
+                            </select>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-sm">
+                                <i class="bi bi-funnel"></i> Áp dụng bộ lọc
+                            </button>
+                            <a href="{% url 'search:posts' %}?q={{ query }}" class="btn btn-outline-secondary btn-sm">
+                                <i class="bi bi-arrow-clockwise"></i> Đặt lại
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-9">
+                    
+            <!-- Posts Results -->
+            {% if posts_count > 0 %}
+            <div class="card shadow-sm">
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for post in posts %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <h5 class="mb-2">
+                                        <a href="{% url 'forum:post_detail' post.id %}"class="text-decoration-none text-primary">
+                                            {{ post.title }}
+                                        </a>
+                                    </h5>
+                                    
+                                    <p class="text-muted mb-3">{{ post.content|truncatewords:50 }}</p>
+                                    
+                                    <!-- Post Metadata -->
+                                    <div class="row text-muted small">
+                                        <div class="col-md-6">
+                                            <div class="mb-1">
+                                                <i class="bi bi-person me-1"></i>
+                                                <strong>Tác giả:</strong> {{ post.author_name }}
+                                            </div>
+                                            <div class="mb-1">
+                                                <i class="bi bi-book me-1"></i>
+                                                <strong>Môn học:</strong> {{ post.subject_name }}
+                                            </div>
+                                            <div class="mb-1">
+                                                <i class="bi bi-calendar me-1"></i>
+                                                <strong>Đăng lúc:</strong> {{ post.created_at|date:"d/m/Y H:i" }}
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-1">
+                                                <i class="bi bi-eye me-1"></i>
+                                                <strong>Lượt xem:</strong> {{ post.view_count }}
+                                            </div>
+                                            <div class="mb-1">
+                                                <i class="bi bi-chat me-1"></i>
+                                                <strong>Bình luận:</strong> {{ post.comment_count }}
+                                            </div>
+                                            <div class="mb-1">
+                                                <i class="bi bi-hand-thumbs-up me-1"></i>
+                                                <strong>Votes đánh giá:</strong> {{ post.vote_score }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pagination -->
+            {% if posts.has_other_pages %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if posts.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?q={{ query }}&page={{ posts.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'q' and key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Trước</a>
+                    </li>
+                    {% endif %}
+
+                    {% for num in posts.paginator.page_range %}
+                    {% if posts.number == num %}
+                    <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                    {% else %}
+                    <li class="page-item">
+                        <a class="page-link" href="?q={{ query }}&page={{ num }}{% for key, value in request.GET.items %}{% if key != 'q' and key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+
+                    {% if posts.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?q={{ query }}&page={{ posts.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'q' and key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Tiếp</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+                
+        {% else %}
+            <div class="card shadow-sm">
+                <div class="card-body text-center py-5">
+                    <i class="bi bi-search display-1 text-muted"></i>
+                    <h4 class="text-muted mt-3">Không tìm thấy bài viết nào</h4>
+                    <p class="text-muted">Hãy thử lại với từ khóa hoặc bộ lọc khác</p>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+    {% else %}
+        <!-- No Query -->
+        <div class="card shadow-sm">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-search display-1 text-muted"></i>
+                <h4 class="text-muted mt-3">Nhập từ khóa để tìm kiếm bài viết</h4>
+                <p class="text-muted">Sử dụng các bộ lọc để thu hẹp kết quả tìm kiếm</p>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+{% endblock %}
+
+{% block style %}
+<style>
+.card {
+    border: none;
+    border-radius: 15px;
+    transition: transform 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.card-header {
+    border-radius: 15px 15px 0 0 !important;
+    border: none;
+}
+
+.btn {
+    border-radius: 10px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.list-group-item {
+    border: none;
+    border-bottom: 1px solid #eee;
+    transition: background-color 0.2s;
+    padding: 1.25rem;
+}
+
+.list-group-item:hover {
+    background-color: #f8f9fa;
+}
+
+.list-group-item:last-child {
+    border-bottom: none;
+}
+
+.breadcrumb {
+    background: none;
+    padding: 0;
+}
+
+.breadcrumb-item a {
+    color: #6c757d;
+    text-decoration: none;
+}
+
+.breadcrumb-item a:hover {
+    color: #198754;
+}
+
+.breadcrumb-item.active {
+    color: #198754;
+    font-weight: 500;
+}
+
+.badge {
+    font-size: 0.75em;
+}
+
+.form-check-input:checked {
+    background-color: #198754;
+    border-color: #198754;
+}
+
+.form-select:focus {
+    border-color: #198754;
+    box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25);
+}
+
+.nav-tabs {
+    border-bottom: 2px solid #dee2e6;
+}
+
+.nav-tabs .nav-link {
+    border: none;
+    color: #6c757d;
+    font-weight: 500;
+    border-radius: 8px 8px 0 0;
+    margin-bottom: -2px;
+}
+
+.nav-tabs .nav-link.active {
+    color: #198754;
+    background-color: white;
+    border-bottom: 3px solid #198754;
+}
+
+.nav-tabs .nav-link:hover {
+    border-color: transparent;
+    color: #198754;
+}
+
+.input-group-text {
+    background-color: #f8f9fa;
+    border-color: #dee2e6;
+}
+</style>
+{% endblock %}
+
+{% block script %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-submit form when select elements change
+    const selectElements = document.querySelectorAll('select');
+    selectElements.forEach(select => {
+        select.addEventListener('change', function() {
+            document.getElementById('filterForm').submit();
+        });
+    });
+
+    // Keep checkboxes state - don't auto-submit for checkboxes
+    const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+    checkboxes.forEach(checkbox => {
+        // Preserve state across form submissions
+        const urlParams = new URLSearchParams(window.location.search);
+        const searchInValues = urlParams.getAll('search_in');
+        if (searchInValues.includes(checkbox.value)) {
+            checkbox.checked = true;
+        }
+    });
+
+    // Add loading state to form submission
+    const filterForm = document.getElementById('filterForm');
+    filterForm.addEventListener('submit', function() {
+        const submitBtn = this.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Đang tải...';
+            submitBtn.disabled = true;
+        }
+    });
+});
+</script>
+{% endblock %}
