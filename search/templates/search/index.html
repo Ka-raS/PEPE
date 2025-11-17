@@ -1,0 +1,235 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Tìm kiếm{% endblock %}
+
+{% block main %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{% url 'home:index' %}" class="text-decoration-none">
+                    <i class="bi bi-house"></i> Trang chủ
+                </a>
+            </li>
+            <li class="breadcrumb-item active">Tìm kiếm</li>
+        </ol>
+    </nav>
+
+    <!-- Search Header Component -->
+    {% include 'search/header.html' %}
+
+    {% if query %}
+    <!-- Results for All -->
+    <div class="row">
+        <!-- Users Results -->
+        {% if users_count > 0 %}
+        <div class="col-12 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-people me-2"></i>Người dùng ({{ users_count }})
+                    </h5>
+                    <a href="{% url 'search:users' %}?q={{ query }}" class="btn btn-sm btn-light">
+                        Xem tất cả <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        {% for user in users|slice:":5" %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">
+                                    <i class="bi bi-person-circle me-2"></i>{{ user.username }}
+                                </h6>
+                                <p class="mb-1 text-muted">
+                                    {{ user.first_name }} {{ user.last_name }}
+                                    <span class="badge bg-info ms-2">{{ user.role }}</span>
+                                </p>
+                                <small class="text-muted">{{ user.email }}</small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Posts Results -->
+        {% if posts_count > 0 %}
+        <div class="col-12 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-chat-dots me-2"></i>Bài viết ({{ posts_count }})
+                    </h5>
+                    <a href="{% url 'search:posts' %}?q={{ query }}" class="btn btn-sm btn-light">
+                        Xem tất cả <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        {% for post in posts|slice:":5" %}
+                        <div class="list-group-item">
+                            <h6 class="mb-1">
+                                <a href="{% url 'forum:post_detail' post.id %}" class="text-decoration-none">
+                                    {{ post.title }}
+                                </a>
+                            </h6>
+                            <p class="mb-1 text-muted">{{ post.content|truncatewords:30 }}</p>
+                            <div class="d-flex justify-content-between align-items-center mt-2">
+                                <small class="text-muted">
+                                    <i class="bi bi-person me-1"></i>{{ post.author_name }}
+                                    <i class="bi bi-calendar ms-2 me-1"></i>{{ post.created_at|date:"d/m/Y H:i" }}
+                                    <i class="bi bi-eye ms-2 me-1"></i>{{ post.view_count }}
+                                </small>
+                                <span class="badge bg-secondary">{{ post.subject_name }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Tests Results -->
+        {% if tests_count > 0 %}
+        <div class="col-12 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-file-earmark-text me-2"></i>Bài kiểm tra ({{ tests_count }})
+                    </h5>
+                    <a href="{% url 'search:tests' %}?q={{ query }}" class="btn btn-sm btn-light">
+                        Xem tất cả <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        {% for test in tests|slice:":5" %}
+                        <div class="list-group-item">
+                            <h6 class="mb-1">
+                                <a href="{% url 'forum:test_detail' test.id %}" class="text-decoration-none">
+                                    {{ test.title }}
+                                </a>
+                            </h6>
+                            <p class="mb-1 text-muted">{{ test.description|truncatewords:30 }}</p>
+                            <div class="d-flex justify-content-between align-items-center mt-2">
+                                <small class="text-muted">
+                                    <i class="bi bi-person me-1"></i>{{ test.author_name }}
+                                    <i class="bi bi-clock ms-2 me-1"></i>{{ test.time_limit }} phút
+                                    <i class="bi bi-calendar ms-2 me-1"></i>{{ test.created_at|date:"d/m/Y H:i" }}
+                                </small>
+                                <span class="badge bg-secondary">{{ test.subject_name }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- No Results -->
+        {% if total_count == 0 %}
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body text-center py-5">
+                    <i class="bi bi-search display-1 text-muted"></i>
+                    <h4 class="text-muted mt-3">Không tìm thấy kết quả nào</h4>
+                    <p class="text-muted">Hãy thử lại với từ khóa tìm kiếm khác</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block style %}
+<style>
+.card {
+    border: none;
+    border-radius: 15px;
+    transition: transform 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.card-header {
+    border-radius: 15px 15px 0 0 !important;
+    border: none;
+}
+
+.btn {
+    border-radius: 10px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.list-group-item {
+    border: none;
+    border-bottom: 1px solid #eee;
+    transition: background-color 0.2s;
+}
+
+.list-group-item:hover {
+    background-color: #f8f9fa;
+}
+
+.list-group-item:last-child {
+    border-bottom: none;
+}
+
+.breadcrumb {
+    background: none;
+    padding: 0;
+}
+
+.breadcrumb-item a {
+    color: #6c757d;
+    text-decoration: none;
+}
+
+.breadcrumb-item a:hover {
+    color: #198754;
+}
+
+.breadcrumb-item.active {
+    color: #198754;
+    font-weight: 500;
+}
+
+.badge {
+    font-size: 0.75em;
+}
+
+.nav-tabs {
+    border-bottom: 2px solid #dee2e6;
+}
+
+.nav-tabs .nav-link {
+    border: none;
+    color: #6c757d;
+    font-weight: 500;
+    border-radius: 8px 8px 0 0;
+    margin-bottom: -2px;
+}
+
+.nav-tabs .nav-link.active {
+    color: #198754;
+    background-color: white;
+    border-bottom: 3px solid #198754;
+}
+
+.nav-tabs .nav-link:hover {
+    border-color: transparent;
+    color: #198754;
+}
+</style>
+{% endblock %}

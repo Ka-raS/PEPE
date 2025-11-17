@@ -1,72 +1,316 @@
-# # search/views.py
-# from django.shortcuts import render
-# from django.db.models import Q
-# from django.core.paginator import Paginator
-# from forum.models import Thread, Subject # Import model của bạn
-# from django.contrib.auth.models import User
-# from urllib.parse import urlparse # Cần để phân tích URL
-# from forum.models import Forum  # <-- Import thêm Forum
-# from django.contrib.auth.models import User # <-- Import User
-# from django.db.models.functions import Lower
+from django.db import connection
+from django.shortcuts import render
+from django.core.paginator import Paginator
 
-# def search_home_view(request):
-#     """
-#     Xử lý logic cho trang Tìm kiếm Nâng cao.
-#     """
-#     # 1. Bắt đầu với tất cả các Thread
-#     results = Thread.objects.select_related(
-#         'forum__subject', 'author'
-#     ).all()
 
-#     # 2. Lấy các giá trị lọc từ GET
-#     query = request.GET.get('q', '')
-#     subject_id = request.GET.get('subject', '')
-#     forum_id = request.GET.get('forum', '')
-#     author_id = request.GET.get('author', '')
-#     date_from = request.GET.get('date_from', '')
-#     date_to = request.GET.get('date_to', '')
-#     sort_by = request.GET.get('sort', 'newest')
-
-#     # 3. Áp dụng các bộ lọc
-#     if query:
-#         results = results.filter(
-#             Q(title__icontains=query) | Q(content__icontains=query)
-#         )
-#     if subject_id:
-#         results = results.filter(forum__subject_id=subject_id)
-#     if forum_id:
-#         results = results.filter(forum_id=forum_id)
-#     if author_id:
-#         results = results.filter(author_id=author_id)
-#     if date_from:
-#         results = results.filter(created_at__gte=date_from)
-#     if date_to:
-#         results = results.filter(created_at__lte=date_to)
-
-#     # 4. Sắp xếp (Đã cập nhật)
-#     if sort_by == 'oldest':
-#         results = results.order_by('created_at')
-#     elif sort_by == 'a-z':
-#         results = results.order_by(Lower('title'))  # <-- Sắp xếp A-Z
-#     elif sort_by == 'z-a':
-#         results = results.order_by(Lower('title').desc())  # <-- Sắp xếp Z-A
-#     else: # Mặc định là 'newest'
-#         results = results.order_by('-created_at')
+def index(request):
+    query = request.GET.get('q', '').strip()
+    results = {
+        'users': [],
+        'posts': [],
+        'tests': []
+    }
     
-#     # Áp dụng distinct() sau khi lọc
-#     results = results.distinct()
+    if query:
+        # Reuse the individual search functions with detailed=False for performance
+        results['users'] = _search_users(query, detailed=False)
+        results['posts'] = _search_posts(query, detailed=False) 
+        results['tests'] = _search_tests(query, detailed=False)
 
-#     # 5. Phân trang
-#     paginator = Paginator(results, 10)
-#     page_number = request.GET.get('page')
-#     page_obj = paginator.get_page(page_number)
+    # Pagination
+    users_paginator = Paginator(results['users'], 10)
+    posts_paginator = Paginator(results['posts'], 10)
+    tests_paginator = Paginator(results['tests'], 10)
     
-#     # 6. Lấy dữ liệu cho các dropdown trong bộ lọc
-#     context = {
-#         'results': page_obj,
-#         'all_subjects': Subject.objects.all(),
-#         'all_forums': Forum.objects.all(),
-#         'all_authors': User.objects.filter(is_active=True).order_by('username'),
-#     }
+    page = request.GET.get('page', 1)
+    
+    context = {
+        'query': query,
+        'current_tab': 'all',
+        'users': users_paginator.get_page(page),
+        'posts': posts_paginator.get_page(page),
+        'tests': tests_paginator.get_page(page),
+        'users_count': len(results['users']),
+        'posts_count': len(results['posts']),
+        'tests_count': len(results['tests']),
+        'total_count': len(results['users']) + len(results['posts']) + len(results['tests'])
+    }
+    
+    return render(request, 'search/index.html', context)
 
-#     return render(request, 'search/search_home.html', context)
+def search_users(request):
+    query = request.GET.get('q', '').strip()
+    role_filter = request.GET.get('role', 'all')
+    department_filter = request.GET.get('department', '')
+    enrollment_year_filter = request.GET.get('enrollment_year', '')
+    search_in = request.GET.getlist('search_in')
+    sort_by = request.GET.get('sort', 'username')
+    
+    # Only search if there's a query
+    if query:
+        results = _search_users(
+            query, 
+            detailed=True,
+            role_filter=role_filter,
+            department_filter=department_filter,
+            enrollment_year_filter=enrollment_year_filter,
+            search_in=search_in,
+            sort_by=sort_by
+        )
+    else:
+        results = []
+
+    # Get departments for filter dropdown - include both teacher departments and student major departments
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT DISTINCT d.id, d.name 
+            FROM departments d
+            WHERE d.id IN (
+                SELECT department_id FROM teachers WHERE department_id IS NOT NULL
+                UNION
+                SELECT m.department_id FROM majors m WHERE m.department_id IS NOT NULL
+            )
+            ORDER BY d.name
+        """)
+        departments = [dict(zip(['id', 'name'], row)) for row in cursor.fetchall()]
+
+    # Get enrollment years for filter dropdown
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT DISTINCT enrollment_year FROM students WHERE enrollment_year IS NOT NULL ORDER BY enrollment_year DESC")
+        enrollment_years = [row[0] for row in cursor.fetchall()]
+
+    paginator = Paginator(results, 10)
+    page = request.GET.get('page', 1)
+    
+    context = {
+        'query': query,
+        'current_tab': 'users',
+        'users': paginator.get_page(page),
+        'users_count': len(results),
+        'total_count': len(results),
+        'departments': departments,
+        'enrollment_years': enrollment_years,
+        'search_in': search_in,
+    }
+    
+    return render(request, 'search/search_users.html', context)
+
+def search_posts(request):
+    query = request.GET.get('q', '').strip()
+    results = _search_posts(query, detailed=True) if query else []
+
+    paginator = Paginator(results, 10)
+    page = request.GET.get('page', 1)
+    
+    context = {
+        'query': query,
+        'current_tab': 'posts',
+        'posts': paginator.get_page(page),
+        'posts_count': len(results),
+        'total_count': len(results)
+    }
+    
+    return render(request, 'search/search_posts.html', context)
+
+def search_tests(request):
+    query = request.GET.get('q', '').strip()
+    results = _search_tests(query, detailed=True) if query else []
+
+    paginator = Paginator(results, 10)
+    page = request.GET.get('page', 1)
+    
+    context = {
+        'query': query,
+        'current_tab': 'tests',
+        'tests': paginator.get_page(page),
+        'tests_count': len(results),
+        'total_count': len(results)
+    }
+    
+    return render(request, 'search/search_tests.html', context)
+
+# Helper functions
+def _search_users(query, detailed=False, **filters):
+    with connection.cursor() as cursor:
+        # Base query - tối giản nhưng vẫn đủ thông tin
+        base_query = """
+            SELECT 
+                u.id, u.username, u.email, 
+                u.avatar_path,
+                -- Full name xử lý NULL
+                CASE 
+                    WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL 
+                    THEN u.last_name || ' ' || u.first_name
+                    WHEN u.first_name IS NOT NULL THEN u.first_name
+                    WHEN u.last_name IS NOT NULL THEN u.last_name
+                    ELSE NULL
+                END as full_name,
+                -- Role detection
+                CASE 
+                    WHEN s.id IS NOT NULL THEN 'student'
+                    WHEN t.id IS NOT NULL THEN 'teacher'
+                    ELSE 'user'
+                END as role
+        """
+        
+        # Thêm các trường chi tiết nếu cần
+        if detailed:
+            base_query += """,
+                -- Student info
+                s.student_code, s.enrollment_year, m.name as major_name,
+                -- Teacher info  
+                t.teacher_code, t.title, t.degree, d.name as department_name
+            """
+        else:
+            base_query += """,
+                s.student_code, t.teacher_code
+            """
+        
+        # FROM và JOINs
+        base_query += """
+            FROM users u
+            LEFT JOIN students s ON u.id = s.id
+            LEFT JOIN teachers t ON u.id = t.id
+        """
+        
+        # Chỉ JOIN các bảng bổ sung khi cần detailed hoặc filter
+        if detailed or filters.get('department_filter'):
+            base_query += """
+                LEFT JOIN departments d ON t.department_id = d.id
+                LEFT JOIN majors m ON s.major_id = m.id
+                LEFT JOIN departments md ON m.department_id = md.id
+            """
+        elif detailed:
+            base_query += """
+                LEFT JOIN departments d ON t.department_id = d.id
+                LEFT JOIN majors m ON s.major_id = m.id
+            """
+
+        # Build WHERE conditions
+        where_conditions = []
+        params = []
+
+        # Search conditions
+        if query:
+            search_parts = []
+            search_in = filters.get('search_in', ['username', 'name', 'email', 'code'])
+            
+            if not search_in:
+                search_in = ['username', 'name', 'email', 'code']
+            
+            if 'username' in search_in:
+                search_parts.append("u.username LIKE %s")
+                params.append(f'%{query}%')
+            if 'name' in search_in:
+                search_parts.append("(u.first_name LIKE %s OR u.last_name LIKE %s)")
+                params.extend([f'%{query}%', f'%{query}%'])
+            if 'email' in search_in:
+                search_parts.append("u.email LIKE %s")
+                params.append(f'%{query}%')
+            if 'code' in search_in:
+                search_parts.append("(s.student_code LIKE %s OR t.teacher_code LIKE %s)")
+                params.extend([f'%{query}%', f'%{query}%'])
+            
+            if search_parts:
+                where_conditions.append(f"({' OR '.join(search_parts)})")
+        else:
+            where_conditions.append("1=0")
+
+        # Role filter
+        role_filter = filters.get('role_filter', 'all')
+        if role_filter == 'student':
+            where_conditions.append("s.id IS NOT NULL")
+        elif role_filter == 'teacher':
+            where_conditions.append("t.id IS NOT NULL")
+
+        # Department filter
+        department_filter = filters.get('department_filter')
+        if department_filter:
+            where_conditions.append("(d.id = %s OR md.id = %s)")
+            params.extend([department_filter, department_filter])
+
+        # Enrollment year filter
+        enrollment_year_filter = filters.get('enrollment_year_filter')
+        if enrollment_year_filter:
+            where_conditions.append("s.enrollment_year = %s")
+            params.append(enrollment_year_filter)
+
+        # Build final query
+        where_clause = " WHERE " + " AND ".join(where_conditions) if where_conditions else ""
+        
+        # Sorting - đơn giản hóa
+        sort_by = filters.get('sort_by', 'username')
+        sort_mapping = {
+            'username': 'u.username',
+            'full_name': """
+                CASE WHEN u.first_name IS NULL AND u.last_name IS NULL THEN 1 ELSE 0 END,
+                COALESCE(u.last_name || ' ' || u.first_name, u.first_name, u.last_name, '')
+            """, 
+            'email': 'u.email',
+            'student_code': 's.student_code',
+            'teacher_code': 't.teacher_code'
+        }
+        sort_field = sort_mapping.get(sort_by, 'u.username')
+        order_clause = f" ORDER BY {sort_field}"
+
+        final_query = base_query + where_clause + order_clause
+        
+        cursor.execute(final_query, params)
+        columns = [col[0] for col in cursor.description]
+        return [dict(zip(columns, row)) for row in cursor.fetchall()]
+    
+def _search_posts(query, detailed=False):
+    with connection.cursor() as cursor:
+        if detailed:
+            cursor.execute("""
+                SELECT p.id, p.title, p.content, p.created_at, p.view_count,
+                       u.username as author_name, s.name as subject_name,
+                       (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id) as comment_count,
+                       (SELECT COALESCE(SUM(v.vote_value), 0) FROM votes v WHERE v.post_id = p.id) as vote_score
+                FROM posts p
+                JOIN users u ON p.author_id = u.id
+                JOIN subjects s ON p.subject_id = s.id
+                WHERE p.title LIKE %s OR p.content LIKE %s
+                ORDER BY p.created_at DESC
+            """, [f'%{query}%', f'%{query}%'])
+        else:
+            cursor.execute("""
+                SELECT p.id, p.title, p.content, p.created_at, p.view_count,
+                       u.username as author_name, s.name as subject_name
+                FROM posts p
+                JOIN users u ON p.author_id = u.id
+                JOIN subjects s ON p.subject_id = s.id
+                WHERE p.title LIKE %s OR p.content LIKE %s
+                ORDER BY p.created_at DESC
+            """, [f'%{query}%', f'%{query}%'])
+        
+        columns = [col[0] for col in cursor.description]
+        return [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+def _search_tests(query, detailed=False):
+    with connection.cursor() as cursor:
+        if detailed:
+            cursor.execute("""
+                SELECT t.id, t.title, t.description, t.time_limit, t.max_attempts, 
+                       t.created_at, t.ends_at, u.username as author_name, 
+                       s.name as subject_name,
+                       (SELECT COUNT(*) FROM test_questions tq WHERE tq.test_id = t.id) as question_count
+                FROM tests t
+                JOIN users u ON t.author_id = u.id
+                JOIN subjects s ON t.subject_id = s.id
+                WHERE t.title LIKE %s OR t.description LIKE %s
+                ORDER BY t.created_at DESC
+            """, [f'%{query}%', f'%{query}%'])
+        else:
+            cursor.execute("""
+                SELECT t.id, t.title, t.description, t.time_limit, t.created_at,
+                       u.username as author_name, s.name as subject_name
+                FROM tests t
+                JOIN users u ON t.author_id = u.id
+                JOIN subjects s ON t.subject_id = s.id
+                WHERE t.title LIKE %s OR t.description LIKE %s
+                ORDER BY t.created_at DESC
+            """, [f'%{query}%', f'%{query}%'])
+        
+        columns = [col[0] for col in cursor.description]
+        return [dict(zip(columns, row)) for row in cursor.fetchall()]

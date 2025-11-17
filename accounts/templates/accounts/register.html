@@ -114,14 +114,17 @@
                         <small class="form-text text-danger" id="passwordConfirmError"></small>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="user_type" class="form-label fw-semibold">Bạn là? *</label>
-                        <select class="form-select" id="user_type" name="user_type" required>
-                            <option value="" selected disabled>-- Chọn vai trò --</option>
-                            <option value="student">Sinh viên</option>
-                            <option value="teacher">Giảng viên</option>
-                        </select>
-                        <small class="form-text text-danger" id="roleError"></small>
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label for="last_name" class="form-label fw-semibold">Họ</label>
+                            <input type="text" class="form-control" id="last_name" name="last_name"
+                                placeholder="Nhập họ">
+                        </div>
+                        <div class="col-6">
+                            <label for="first_name" class="form-label fw-semibold">Tên</label>
+                            <input type="text" class="form-control" id="first_name" name="first_name"
+                                placeholder="Nhập tên">
+                        </div>
                     </div>
 
                     <button type="submit" class="btn btn-success bg-gradient w-100 py-3 fw-semibold mt-3 rounded-3"

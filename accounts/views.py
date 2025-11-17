@@ -47,9 +47,9 @@ def index(request):
     # --- XỬ LÝ POST (Cập nhật thông tin) ---
     if request.method == 'POST':
         full_name = request.POST.get('full_name','').strip()
-        name_parts = full_name.split(' ', 1) if full_name else ['', '']
-        first_name = name_parts[0] if len(name_parts) > 0 else ''
-        last_name = name_parts[1] if len(name_parts) > 1 else ''
+        name_parts = full_name.split()
+        last_name = name_parts[0] if len(name_parts) > 0 else ''
+        first_name = ' '.join(name_parts[1:]) if len(name_parts) > 1 else ''
 
         try:
             with connection.cursor() as cursor:
@@ -86,7 +86,7 @@ def index(request):
         context['email'] = user_data['email']
         context['first_name'] = user_data['first_name'] or ''
         context['last_name'] = user_data['last_name'] or ''
-        context['full_name'] = f"{context['first_name']} {context['last_name']}".strip()
+        context['full_name'] = f"{context['last_name']} {context['first_name']}".strip()
         context['avatar_path'] = f"{user_data['avatar_path']}" if user_data['avatar_path'] else None
 
         if user_type == 'student':

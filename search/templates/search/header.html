@@ -1,0 +1,61 @@
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-success text-white">
+        <h4 class="card-title mb-0">
+            <i class="bi bi-search me-2"></i>Kết quả tìm kiếm
+        </h4>
+    </div>
+    <div class="card-body">
+        <!-- Form tìm kiếm -->
+        <form class="d-flex mb-3" role="search" method="GET" action="">
+            <input class="form-control me-2" type="search" name="q" value="{{ query }}" 
+               placeholder="Nhập từ khóa tìm kiếm..." aria-label="Search">
+            <button class="btn btn-success" type="submit">
+            <i class="bi bi-search"></i>
+            </button>
+        </form>
+
+        <!-- Các tab tìm kiếm -->
+        <ul class="nav nav-tabs nav-justified" id="searchTabs">
+            <li class="nav-item">
+                <a class="nav-link {% if current_tab == 'all' %}active{% endif %}" 
+                   href="{% url 'search:index' %}?q={{ query }}">
+                    <i class="bi bi-grid me-1"></i>Tất cả
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if current_tab == 'users' %}active{% endif %}" 
+                   href="{% url 'search:users' %}?q={{ query }}">
+                    <i class="bi bi-people me-1"></i>Người dùng
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if current_tab == 'posts' %}active{% endif %}" 
+                   href="{% url 'search:posts' %}?q={{ query }}">
+                    <i class="bi bi-chat-dots me-1"></i>Bài viết
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if current_tab == 'tests' %}active{% endif %}" 
+                   href="{% url 'search:tests' %}?q={{ query }}">
+                    <i class="bi bi-file-earmark-text me-1"></i>Bài kiểm tra
+                </a>
+            </li>
+        </ul>
+
+        {% if query %}
+        <div class="mt-3">
+            <p class="mb-0 text-muted">
+                Tìm thấy <strong>{{ total_count }}</strong> kết quả cho từ khóa "<strong>{{ query }}</strong>"
+                {% if current_tab != 'all' %}
+                trong mục <strong>
+                    {% if current_tab == 'users' %}Người dùng
+                    {% elif current_tab == 'posts' %}Bài viết
+                    {% elif current_tab == 'tests' %}Bài kiểm tra
+                    {% endif %}
+                </strong>
+                {% endif %}
+            </p>
+        </div>
+        {% endif %}
+    </div>
+</div>
