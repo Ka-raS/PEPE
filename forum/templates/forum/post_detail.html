@@ -235,7 +235,7 @@
                                             </small>
                                         </div>
                                         {% if current_user_id == comment.commenter.id %}
-                                        <a href="{% url 'forum:delete_comment' comment.id %}" 
+                                        <a href="{% url 'forum:delete_comment' comment.id|urlencode %}"
                                            class="btn btn-outline-danger btn-sm"
                                            onclick="return confirm('Bạn có chắc chắn muốn xóa bình luận này?')">
                                             <i class="bi bi-trash"></i>

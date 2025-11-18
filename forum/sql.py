@@ -53,7 +53,7 @@ def subject_posts(subject_id):
                 p.created_at,
                 p.author_id,
                 u.username,
-                COUNT(c.id)
+                COUNT(*)
             FROM posts p
             LEFT JOIN users u ON p.author_id = u.id
             LEFT JOIN comments c ON p.id = c.post_id
@@ -214,3 +214,5 @@ def insert_post(title, content, subject_id, user_id, attachment_path):
             INSERT INTO posts (title, content, subject_id, author_id, attachment_path)
             VALUES (%s, %s, %s, %s, %s)
         """, [title, content, subject_id, user_id, attachment_path])
+        post_id = cursor.lastrowid
+        return post_id 

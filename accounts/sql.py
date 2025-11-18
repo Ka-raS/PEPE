@@ -68,25 +68,62 @@ def one_teacher(user_id):
             'teacher_code': row[4]
         } if row else None
 
-# PRESENT
-def insert_user(username, email, password, first_name, last_name, user_type):
+# ...existing code...
+
+def insert_user(username, email, password, first_name, last_name, user_type,
+                major_id=None, enrollment_year=None, student_code=None,
+                title=None, teacher_code=None, degree=None, department_id=None):
     with connection.cursor() as cursor:
         cursor.execute("""
             INSERT INTO users
-                (username, email, password, first_name, last_name)
-            VALUES (%s, %s, %s, %s, %s)
-        """, [username, email, password, first_name, last_name])
+                (username, email, password, first_name, last_name, user_type)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, [username, email, password, first_name, last_name, user_type])
+
+        user_id = cursor.lastrowid
 
         if user_type == 'student':
             cursor.execute("""
-                INSERT INTO students (id) 
-                VALUES (%s)
-            """, [cursor.lastrowid])
+                INSERT INTO students (id, student_code, enrollment_year, major_id)
+                VALUES (%s, %s, %s, %s)
+            """, [user_id, student_code, enrollment_year, major_id])
         elif user_type == 'teacher':
             cursor.execute("""
-                INSERT INTO teachers (id) 
-                VALUES (%s)
-            """, [cursor.lastrowid])
+                INSERT INTO teachers (id, teacher_code, title, degree, department_id)
+                VALUES (%s, %s, %s, %s, %s)
+            """, [user_id, teacher_code, title, degree, department_id])
+
+        return user_id
+
+def update_student(user_id, major_id, enrollment_year, student_code):
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT id FROM students WHERE id = %s", [user_id])
+        if cursor.fetchone():
+            cursor.execute("""
+                UPDATE students 
+                SET major_id = %s, enrollment_year = %s, student_code = %s
+                WHERE id = %s
+            """, [major_id, enrollment_year, student_code, user_id])
+        else:
+            cursor.execute("""
+                INSERT INTO students (id, student_code, enrollment_year, major_id) 
+                VALUES (%s, %s, %s, %s)
+            """, [user_id, student_code, enrollment_year, major_id])
+
+def update_teacher(user_id, title, teacher_code, degree, department_id):
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT id FROM teachers WHERE id = %s", [user_id])
+        if cursor.fetchone():
+            cursor.execute("""
+                UPDATE teachers 
+                SET title = %s, teacher_code = %s, degree = %s, department_id = %s
+                WHERE id = %s
+            """, [title, teacher_code, degree, department_id, user_id])
+        else:
+            cursor.execute("""
+                INSERT INTO teachers (id, teacher_code, title, degree, department_id)
+                VALUES (%s, %s, %s, %s, %s)
+            """, [user_id, teacher_code, title, degree, department_id])
 
 def update_user_name(first_name, last_name, user_id):
     with connection.cursor() as cursor:
@@ -103,40 +140,6 @@ def update_user_avatar(avatar_path, user_id):
             SET avatar_path = %s 
             WHERE id = %s
         """, [avatar_path, user_id])        
-
-def update_student(user_id, major_id, enrollment_year, student_code):
-    with connection.cursor() as cursor:
-        cursor.execute("SELECT id FROM students WHERE id = %s", [user_id])
-        
-        if cursor.fetchone():
-            cursor.execute("""
-                UPDATE students 
-                SET major_id = %s, enrollment_year = %s, student_code = %s
-                WHERE id = %s
-            """, [major_id, enrollment_year, student_code, user_id])
-        else:
-            cursor.execute("""
-                INSERT INTO students (id, student_code, enrollment_year, major_id) 
-                VALUES (%s, %s, %s, %s)
-            """, [user_id, student_code, major_id, enrollment_year])
-
-def update_teacher(user_id, title, teacher_code, degree, department_id):
-    with connection.cursor() as cursor:
-        cursor.execute("SELECT id FROM teachers WHERE id = %s", [user_id])
-
-        if cursor.fetchone():
-            cursor.execute("""
-                UPDATE teachers 
-                SET title = %s, teacher_code = %s, degree = %s, department_id = %s
-                WHERE id = %s
-            """, [title, teacher_code, degree, department_id, user_id])
-        else:
-            cursor.execute("""
-                INSERT INTO teachers (id, teacher_code, title, degree, department_id) VALUES (%s, %s, %s, %s, %s)
-            """, [user_id, teacher_code, title, degree, department_id])
-
-
-
 
 def all_subject():
     with connection.cursor() as cursor:

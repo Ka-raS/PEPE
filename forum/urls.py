@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, re_path
 from . import views
 
 app_name = 'forum'
@@ -13,7 +13,7 @@ urlpatterns = [
     path('post/<int:post_id>/', views.post_detail, name='post_detail'),
     path('post/<int:post_id>/vote/', views.vote_post, name='vote_post'),
     path('post/<int:post_id>/comment/', views.add_comment, name='add_comment'),
-    path('comment/<int:comment_id>/delete/', views.delete_comment, name='delete_comment'),
+    re_path(r'^comment/(?P<comment_id>[^/]+)/delete/$', views.delete_comment, name='delete_comment'),
 
     path('create_test/<int:subject_id>/', views.create_test, name='create_test'),
     path('take_test/<int:test_id>/', views.take_test, name='take_test'),

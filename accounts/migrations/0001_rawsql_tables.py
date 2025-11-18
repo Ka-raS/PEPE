@@ -8,61 +8,69 @@ class Migration(migrations.Migration):
     
     operations = [
         migrations.RunSQL("""
+            -- Thực thể mạnh
             CREATE TABLE departments (
                 id INTEGER PRIMARY KEY,
                 name TEXT NOT NULL
             );
-                          
+                      
+            -- Thực thể mạnh
             CREATE TABLE majors (
                 id INTEGER PRIMARY KEY,
                 name TEXT NOT NULL,
                 department_id INTEGER NOT NULL,
-                FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE CASCADE
+                FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE RESTRICT -- Không thể xóa khoa nếu còn ngành thuộc khoa đó
             );
-
+            
+            -- Thực thể mạnh
             CREATE TABLE subjects (
                 id INTEGER PRIMARY KEY,
                 name TEXT NOT NULL,
                 description TEXT
             );
-                          
+            
+            -- Quan hệ nhiều-nhiều giữa majors và subjects
             CREATE TABLE major_subjects (
                 major_id INTEGER NOT NULL,
                 subject_id INTEGER NOT NULL,
                 PRIMARY KEY (major_id, subject_id),
-                FOREIGN KEY (major_id) REFERENCES majors(id) ON DELETE CASCADE,
-                FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE CASCADE
+                FOREIGN KEY (major_id) REFERENCES majors(id) ON DELETE CASCADE, -- Nếu xóa ngành thì các môn không có ở ngành đó nữa
+                FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE CASCADE -- Nếu xóa môn thì các ngành không có môn đó nữa
             );
-
+            
+            -- Thực thể mạnh
             CREATE TABLE users (
                 id INTEGER PRIMARY KEY,
                 username TEXT UNIQUE NOT NULL,
                 password TEXT NOT NULL,
                 email TEXT UNIQUE NOT NULL,
+                user_type TEXT NOT NULL CHECK(user_type IN ('student', 'teacher')),
                 
                 first_name TEXT,
                 last_name TEXT,
                 avatar_path TEXT
             );
-                          
+            
+            -- Thực thể yếu
             CREATE TABLE students (
                 student_code TEXT UNIQUE,
                 enrollment_year INTEGER,
                           
                 id INTEGER PRIMARY KEY,
                 major_id INTEGER,
-                FOREIGN KEY (id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (id) REFERENCES users(id) ON DELETE CASCADE, -- Nếu xóa user thì student cũng bị xóa
                 FOREIGN KEY (major_id) REFERENCES majors(id)
             );
-                          
+                     
+            -- Thực thể yếu
             CREATE TABLE teachers (
-                id INTEGER PRIMARY KEY,
                 teacher_code TEXT UNIQUE,
                 title TEXT,
                 degree TEXT,
                           
+                id INTEGER PRIMARY KEY,
                 department_id INTEGER,
-                FOREIGN KEY (id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (id) REFERENCES users(id) ON DELETE CASCADE, -- Nếu xóa user thì teacher cũng bị xóa
                 FOREIGN KEY (department_id) REFERENCES departments(id)
             );
 

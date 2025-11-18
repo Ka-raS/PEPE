@@ -176,12 +176,13 @@ def index(request):
     return render(request, 'accounts/index.html', context)
 
 
+# ...existing code...
 def register_view(request):
     if request.method != 'POST':
         return render(request, 'accounts/register.html')
     
     username           = request.POST.get('username')
-    email              = request.POST.get('email')
+    email              = (request.POST.get('email') or '').strip().lower()
     password           = request.POST.get('password')
     password_confirm   = request.POST.get('password_confirm')
     first_name         = request.POST.get('first_name') or None
@@ -200,20 +201,25 @@ def register_view(request):
     hashed_password = hash_password(password)
     
     try:
-        # Kiểm tra user đã tồn tại
-        if sql.one_user(username, email):
+        # Kiểm tra user đã tồn tại (kiểm tra riêng username và email)
+        if sql.one_user(username=username) or sql.one_user(email=email):
             messages.error(request, 'Tên đăng nhập hoặc email đã tồn tại')
             return render(request, 'accounts/register.html')
         
-        # Tạo profile mới
-        sql.insert_user(username, email, hashed_password, first_name, last_name, user_type)
+        # Tạo profile mới, bọc thêm để bắt lỗi unique từ DB
+        try:
+            user_id = sql.insert_user(username, email, hashed_password, first_name, last_name, user_type)
+        except e:
+            messages.error(request, 'Tên đăng nhập hoặc email đã tồn tại')
+            return render(request, 'accounts/register.html')
 
         messages.success(request, 'Đăng ký thành công! Vui lòng đăng nhập.')
         return redirect('accounts:login')
         
     except Exception as e:
         messages.error(request, f'Lỗi: {str(e)}')
-        return render(request, 'accounts/register.html')    
+        return render(request, 'accounts/register.html')  
+# ...existing code...  
 
 
 def login_view(request):
@@ -235,7 +241,7 @@ def login_view(request):
     request.session['email']     = user_data['email']
     request.session['user_type'] = 'student' if sql.one_student(user_data['id']) else 'teacher'
 
-    messages.success(request, f'Xin chào {request.session['username']}!')
+    messages.success(request, f"Xin chào {request.session['username']}!")
     return redirect('home:index')
 
 

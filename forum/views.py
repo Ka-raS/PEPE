@@ -3,6 +3,7 @@ import os
 import uuid
 import json
 from datetime import datetime
+from urllib.parse import unquote
 
 from django.conf import settings
 from django.contrib import messages
@@ -432,7 +433,7 @@ def post_detail(request, post_id):
                 'first_name': row[11],
                 'last_name': row[12],
                 'avatar_path': row[13],
-                'get_full_name': f"{row[11]} {row[12]}".strip() or row[10]
+                'get_full_name': f"{row[12]} {row[11]}".strip() or row[10]
             },
             'comment_count': row[14],
             'vote_value': row[15]
@@ -450,10 +451,10 @@ def post_detail(request, post_id):
         # Lấy danh sách comments
         cursor.execute("""
             SELECT 
-                c.id,
-                c.content,
-                c.created_at,
                 c.commenter_id,
+                c.post_id,
+                c.created_at,
+                c.content,
                 u.username,
                 u.first_name,
                 u.last_name,
@@ -466,16 +467,17 @@ def post_detail(request, post_id):
         
         comments = [
             {
-                'id': row[0],
-                'content': row[1],
+                # tạo id chuỗi từ khóa tổ hợp để template/URL có thể truyền về delete
+                'id': f"{row[0]}|{row[1]}|{row[2]}",
+                'content': row[3],
                 'created_at': row[2],
                 'commenter': {
-                    'id': row[3],
+                    'id': row[0],
                     'username': row[4],
                     'first_name': row[5],
                     'last_name': row[6],
                     'avatar_path': row[7],
-                    'get_full_name': f"{row[5]} {row[6]}".strip() if row[5] and row[6] else row[4]
+                    'get_full_name': f"{row[6]} {row[5]}".strip() if row[5] and row[6] else row[4]
                 }
             }
             for row in cursor.fetchall()
@@ -515,7 +517,7 @@ def post_detail(request, post_id):
                 'created_at': row[3],
                 'author': {
                     'username': row[4],
-                    'get_full_name': f"{row[5]} {row[6]}".strip() or row[4]
+                    'get_full_name': f"{row[6]} {row[5]}".strip() or row[4]
                 }
             }
             for row in cursor.fetchall()
@@ -583,7 +585,8 @@ def add_comment(request, post_id):
 
 def delete_comment(request, comment_id):
     """Xóa bình luận"""
-    
+
+    comment_id = unquote(comment_id)
     if not request.session.get('user_id'):
         messages.error(request, 'Vui lòng đăng nhập')
         return redirect('accounts:login')
@@ -730,9 +733,9 @@ def create_test(request, subject_id):
                     if question['source'] == 'new':
                         # Tạo câu hỏi mới
                         cursor.execute("""
-                            INSERT INTO questions (content, subject_id, author_id)
-                            VALUES (%s, %s, %s)
-                        """, [question['content'], subject_id, user_id])
+                            INSERT INTO questions (content, question_type, subject_id, author_id)
+                            VALUES (%s, %s, %s, %s)
+                        """, [question['content'], question['type'], subject_id, user_id])
                         
                         question_id = cursor.lastrowid
 
@@ -910,9 +913,9 @@ def create_question(request, subject_id):
         with connection.cursor() as cursor:
             # Tạo câu hỏi
             cursor.execute("""
-                INSERT INTO questions (content, attachment_path, subject_id, author_id)
-                VALUES (%s, %s, %s, %s)
-            """, [content, attachment_path, subject_id, user_id])
+                INSERT INTO questions (content, attachment_path, question_type, subject_id, author_id)
+                VALUES (%s, %s, %s, %s, %s)
+            """, [content, attachment_path, question_type, subject_id, user_id])
             question_id = cursor.lastrowid
             
             if question_type == 'multiple_choice':
@@ -1073,39 +1076,24 @@ def handle_test_submission(request, test_id, user_id, attempt_count):
                 user_answer = request.POST.get(f'answer_{question_id}', '').strip()
                 
                 if question_type == 'multiple_choice' and user_answer:
-                    # user_answer giờ đã là option_id
+                    # user_answer giờ là option_id -> lưu trực tiếp vào multiple_choice_answers
                     try:
                         selected_option_id = int(user_answer)
                     except ValueError:
                         selected_option_id = None
                     
                     if selected_option_id:
-                        # Tạo answer
                         cursor.execute("""
-                            INSERT INTO answers (submission_id, question_id)
+                            INSERT INTO multiple_choice_answers (selected_option_id, submission_id)
                             VALUES (%s, %s)
-                        """, [submission_id, question_id])
-                        answer_id = cursor.lastrowid
-                        
-                        # Tạo multiple choice answer
-                        cursor.execute("""
-                            INSERT INTO multiple_choice_answers (id, selected_option_id)
-                            VALUES (%s, %s)
-                        """, [answer_id, selected_option_id])
+                        """, [selected_option_id, submission_id])
                         
                 elif question_type == 'essay' and user_answer:
-                    # Tạo answer
+                    # Lưu trực tiếp vào essay_answers (submission_id, essay_question_id)
                     cursor.execute("""
-                        INSERT INTO answers (submission_id, question_id)
-                        VALUES (%s, %s)
-                    """, [submission_id, question_id])
-                    answer_id = cursor.lastrowid
-                    
-                    # Tạo essay answer (chưa chấm)
-                    cursor.execute("""
-                        INSERT INTO essay_answers (id, content, is_corrected)
-                        VALUES (%s, %s, NULL)
-                    """, [answer_id, user_answer])
+                        INSERT INTO essay_answers (content, is_correct, submission_id, essay_question_id)
+                        VALUES (%s, NULL, %s, %s)
+                    """, [user_answer, submission_id, question_id])
         
         messages.success(request, 'Nộp bài thành công!')
         return redirect('forum:submission_detail', submission_id=submission_id)
@@ -1113,7 +1101,6 @@ def handle_test_submission(request, test_id, user_id, attempt_count):
     except Exception as e:
         messages.error(request, f'Có lỗi xảy ra: {str(e)}')
         return redirect('forum:take_test', test_id=test_id)
-
 
 def display_test(request, test_id, user_id, attempt_count, test_info):
     """Hiển thị bài kiểm tra"""
@@ -1427,32 +1414,30 @@ def submissions_history(request, test_id):
         for row in cursor.fetchall():
             submission_id = row[0]
             
-            # True Hell  |
-            #           \|/
-
-            # Tính điểm cho từng submission
+            # Tính tổng câu hỏi dựa trên test_questions
             cursor.execute("""
-                SELECT 
-                    COUNT(*) as total_questions,
-                    COALESCE(SUM(
-                        CASE 
-                            WHEN mcq.id IS NOT NULL AND mca.selected_option_id = mcq.correct_option_id THEN 1
-                            WHEN eq.id IS NOT NULL AND ea.is_corrected = 1 THEN 1
-                            ELSE 0
-                        END
-                    ), 0) as score
-                FROM answers a
-                INNER JOIN questions q ON a.question_id = q.id
-                LEFT JOIN multiple_choice_questions mcq ON q.id = mcq.id
-                LEFT JOIN essay_questions eq ON q.id = eq.id
-                LEFT JOIN multiple_choice_answers mca ON a.id = mca.id AND mcq.id IS NOT NULL
-                LEFT JOIN essay_answers ea ON a.id = ea.id AND eq.id IS NOT NULL
-                WHERE a.submission_id = %s
-            """, [submission_id])
+                SELECT COUNT(*) FROM test_questions WHERE test_id = %s
+            """, [test_id])
+            total_questions = cursor.fetchone()[0] or 0
             
-            score_row = cursor.fetchone()
-            total_questions = score_row[0] or 0
-            total_score = score_row[1]
+            # Đếm đáp án trắc nghiệm đúng
+            cursor.execute("""
+                SELECT COUNT(*) FROM multiple_choice_answers mca
+                JOIN multiple_choice_options opt ON mca.selected_option_id = opt.id
+                JOIN multiple_choice_questions mcq ON opt.question_id = mcq.id
+                WHERE mca.submission_id = %s
+                AND mca.selected_option_id = mcq.correct_option_id
+            """, [submission_id])
+            mc_correct = cursor.fetchone()[0] or 0
+            
+            # Đếm đáp án tự luận đã được chấm đúng
+            cursor.execute("""
+                SELECT COUNT(*) FROM essay_answers ea
+                WHERE ea.submission_id = %s AND ea.is_correct = 1
+            """, [submission_id])
+            essay_correct = cursor.fetchone()[0] or 0
+            
+            total_score = (mc_correct or 0) + (essay_correct or 0)
             
             submissions.append({
                 'id': submission_id,
@@ -1471,7 +1456,6 @@ def submissions_history(request, test_id):
         'test_title': test_title,
     }
     return render(request, 'forum/submissions_history.html', context)
-
 
 def submission_detail(request, submission_id):
     """Chi tiết bài nộp"""
@@ -1493,93 +1477,87 @@ def submission_detail(request, submission_id):
         if not submission_row:
             raise Http404("Bài nộp không tồn tại")
         
-        # Lấy danh sách câu trả lời với thông tin chi tiết
+        test_id = submission_row[4]
+        
+        # Lấy thứ tự câu hỏi để sắp xếp
         cursor.execute("""
-            SELECT 
-                a.id,
-                q.id as question_id,
-                q.content as question_content,
-                CASE 
-                    WHEN mcq.id IS NOT NULL THEN 'multiple_choice'
-                    WHEN eq.id IS NOT NULL THEN 'essay'
-                    ELSE 'unknown'
-                END as question_type,
-                mcq.correct_option_id,
-                mca.selected_option_id,
-                ea.content as essay_content,
-                ea.is_corrected
-            FROM answers a
-            JOIN questions q ON a.question_id = q.id
-            LEFT JOIN multiple_choice_questions mcq ON q.id = mcq.id
-            LEFT JOIN essay_questions eq ON q.id = eq.id
-            LEFT JOIN multiple_choice_answers mca ON a.id = mca.id
-            LEFT JOIN essay_answers ea ON a.id = ea.id
-            WHERE a.submission_id = %s
-            ORDER BY a.id
-        """, [submission_id])
+            SELECT question_id, question_order FROM test_questions WHERE test_id = %s
+        """, [test_id])
+        order_map = {r[0]: r[1] for r in cursor.fetchall()}
         
         answers = []
         total_score = 0
         total_questions = 0
         
-        for row in cursor.fetchall():
-            question_type = row[3]
-            score = None
-            answer_content = ''
-            is_correct = False
-            correct_answer_text = ''
+        # Lấy multiple choice answers
+        cursor.execute("""
+            SELECT q.id as question_id, q.content as question_content, mcq.correct_option_id, mca.selected_option_id
+            FROM multiple_choice_answers mca
+            JOIN multiple_choice_options opt ON mca.selected_option_id = opt.id
+            JOIN multiple_choice_questions mcq ON opt.question_id = mcq.id
+            JOIN questions q ON q.id = mcq.id
+            WHERE mca.submission_id = %s
+        """, [submission_id])
+        
+        for qid, qcontent, correct_option_id, selected_option_id in cursor.fetchall():
+            # Lấy text của đáp án và đáp án đúng
+            cursor.execute("""
+                SELECT id, content FROM multiple_choice_options WHERE question_id = %s ORDER BY id
+            """, [qid])
+            options = list(cursor.fetchall())
             user_answer_text = ''
+            correct_answer_text = ''
+            is_correct = (selected_option_id == correct_option_id)
+            for idx, (opt_id, opt_content) in enumerate(options):
+                label = chr(65 + idx)
+                if opt_id == selected_option_id:
+                    user_answer_text = f"{label}. {opt_content}"
+                if opt_id == correct_option_id:
+                    correct_answer_text = f"{label}. {opt_content}"
             
-            if question_type == 'multiple_choice':
-                correct_option_id = row[4]
-                selected_option_id = row[5]
-                
-                # Lấy text của đáp án
-                cursor.execute("""
-                    SELECT id, content
-                    FROM multiple_choice_options
-                    WHERE question_id = %s
-                    ORDER BY id
-                """, [row[1]])
-                
-                options = list(cursor.fetchall())
-                for idx, (opt_id, opt_content) in enumerate(options):
-                    label = chr(65 + idx)
-                    if opt_id == selected_option_id:
-                        user_answer_text = f"{label}. {opt_content}"
-                    if opt_id == correct_option_id:
-                        correct_answer_text = f"{label}. {opt_content}"
-                
-                # Chấm điểm
-                is_correct = (selected_option_id == correct_option_id)
-                score = 1 if is_correct else 0
-                answer_content = user_answer_text
-                total_score += score
-                total_questions += 1
-                
-            elif question_type == 'essay':
-                answer_content = row[6] or ''
-                is_corrected = row[7]
-                
-                if is_corrected is not None:
-                    score = 1 if is_corrected == 1 else 0
-                    total_score += score
-                    total_questions += 1
-                else:
-                    score = None  # Chưa chấm
-                    total_questions += 1
+            score = 1 if is_correct else 0
+            total_score += score
+            total_questions += 1
             
             answers.append({
-                'id': row[0],
-                'question_id': row[1],
-                'question_content': row[2],
-                'question_type': question_type,
-                'answer_content': answer_content,
+                'question_id': qid,
+                'question_content': qcontent,
+                'question_type': 'multiple_choice',
+                'answer_content': user_answer_text,
                 'score': score,
                 'is_correct': is_correct,
                 'correct_answer': correct_answer_text,
-                'is_corrected': row[7] if question_type == 'essay' else True
+                'order': order_map.get(qid, 0)
             })
+        
+        # Lấy essay answers
+        cursor.execute("""
+            SELECT ea.essay_question_id as question_id, q.content as question_content, ea.content as essay_content, ea.is_correct
+            FROM essay_answers ea
+            JOIN questions q ON q.id = ea.essay_question_id
+            WHERE ea.submission_id = %s
+        """, [submission_id])
+        
+        for qid, qcontent, essay_content, is_corrected in cursor.fetchall():
+            score = 1 if is_corrected == 1 else (0 if is_corrected == 0 else None)
+            if score is not None:
+                total_score += score
+            total_questions += 1
+            
+            answers.append({
+                'question_id': qid,
+                'question_content': qcontent,
+                'question_type': 'essay',
+                'answer_content': essay_content or '',
+                'score': score,
+                'is_correct': (is_corrected == 1),
+                'correct_answer': None,
+                'order': order_map.get(qid, 0),
+                'is_corrected': is_corrected
+            })
+        
+        # Sắp xếp theo question_order
+        answers.sort(key=lambda a: a.get('order', 0))
     
         # Kiểm tra xem người xem có phải là tác giả bài kiểm tra không
         cursor.execute("SELECT author_id FROM tests WHERE id = %s", [submission_row[4]])
@@ -1604,7 +1582,6 @@ def submission_detail(request, submission_id):
         'total_questions': total_questions
     }
     return render(request, 'forum/submission_detail.html', context)
-
 
 def grade_submission(request, submission_id):
     """Chấm điểm bài nộp (chỉ tác giả bài kiểm tra)"""
@@ -1636,17 +1613,23 @@ def grade_submission(request, submission_id):
         # Xử lý POST - lưu điểm chấm
         if request.method == 'POST':
             try:
-                # Lấy điểm chấm cho từng câu tự luận
+                # POST keys dạng grade_<essay_question_id>
                 for key, value in request.POST.items():
-                    if key.startswith('grade_'):
-                        answer_id = int(key.split('_')[1])
+                    if not key.startswith('grade_'):
+                        continue
+                    try:
+                        essay_qid = int(key.split('_', 1)[1])
                         is_correct = int(value)  # 1 = đúng, 0 = sai
-                        
-                        cursor.execute("""
-                            UPDATE essay_answers
-                            SET is_corrected = %s
-                            WHERE id = %s
-                        """, [is_correct, answer_id])
+                        if is_correct not in (0, 1):
+                            continue
+                    except Exception:
+                        continue
+                    
+                    cursor.execute("""
+                        UPDATE essay_answers
+                        SET is_correct = %s
+                        WHERE submission_id = %s AND essay_question_id = %s
+                    """, [is_correct, submission_id, essay_qid])
                 
                 messages.success(request, 'Đã chấm bài thành công!')
                 return redirect('forum:submission_detail', submission_id=submission_id)
@@ -1654,30 +1637,29 @@ def grade_submission(request, submission_id):
             except Exception as e:
                 messages.error(request, f'Lỗi khi chấm bài: {str(e)}')
         
-        # Lấy danh sách câu hỏi tự luận chưa chấm
+        # Lấy danh sách câu hỏi tự luận (essay_answers) để hiển thị chấm
         cursor.execute("""
             SELECT 
-                a.id,
+                ea.essay_question_id as question_id,
                 q.content as question_content,
                 ea.content as answer_content,
-                ea.is_corrected,
+                ea.is_correct,
                 eq.word_limit
-            FROM answers a
-            JOIN questions q ON a.question_id = q.id
+            FROM essay_answers ea
+            JOIN questions q ON ea.essay_question_id = q.id
             JOIN essay_questions eq ON q.id = eq.id
-            JOIN essay_answers ea ON a.id = ea.id
-            WHERE a.submission_id = %s
-            ORDER BY a.id
+            WHERE ea.submission_id = %s
+            ORDER BY ea.essay_question_id
         """, [submission_id])
         
         essay_answers = []
-        for row in cursor.fetchall():
+        for r in cursor.fetchall():
             essay_answers.append({
-                'answer_id': row[0],
-                'question_content': row[1],
-                'answer_content': row[2],
-                'is_corrected': row[3],
-                'word_limit': row[4]
+                'question_id': r[0],
+                'question_content': r[1],
+                'answer_content': r[2],
+                'is_correct': r[3],
+                'word_limit': r[4]
             })
         
         # Lấy thông tin sinh viên
