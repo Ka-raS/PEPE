@@ -16,6 +16,7 @@
 - Creating posts with file attachments.
 - Creating tests from the question banks.
 - Grading test's submissions both automatically and manually.
+- [See more here (Vietnamese)](/docs/Báo_cáo_bài_tập_lớn_môn_cơ_sở_dữ_liệu_nhóm_10.pdf)
 
 ## Requirements
 
