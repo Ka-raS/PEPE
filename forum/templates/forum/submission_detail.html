@@ -5,6 +5,15 @@
 
 {% block main %}
 <div class="container mt-4">
+    {% if messages %}
+      {% for message in messages %}
+        <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-success{% endif %} alert-dismissible fade show border-0 rounded-card" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {% endfor %}
+    {% endif %}
+
     <nav aria-label="breadcrumb" class="mb-4">
         <ol class="breadcrumb">
             <li class="breadcrumb-item">
@@ -96,13 +105,17 @@
                             <h6 class="text-primary">
                                 <i class="bi bi-question-circle"></i> Câu hỏi:
                             </h6>
-                            <p class="mb-3">{{ answer.question_content }}</p>
+                            <p class="mb-3">{{ answer.question_content|linebreaksbr }}</p>
                             
                             <h6 class="text-primary">
                                 <i class="bi bi-chat-left-text"></i> Câu trả lời của bạn:
                             </h6>
                             <div class="alert rounded-card {% if answer.is_correct %}alert-success{% elif answer.score == 0 %}alert-danger{% else %}alert-light{% endif %} mb-3">
-                                {{ answer.answer_content|default:"<em>Chưa trả lời</em>"|safe }}
+                                {% if answer.answer_content %}
+                                    {{ answer.answer_content|linebreaksbr }}
+                                {% else %}
+                                    <em>Chưa trả lời</em>
+                                {% endif %}
                             </div>
                             
                             {% if answer.question_type == 'multiple_choice' and not answer.is_correct %}

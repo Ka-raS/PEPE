@@ -1,11 +1,12 @@
 # PEPE - Web Forum
 
-|                                                          |                                                               |
-|:--------------------------------------------------------:|:-------------------------------------------------------------:|
-| ![Homepage](   /media/screenshots/home_index.png)        | ![Profile](    /media/screenshots/accounts_index.png)         |
-| ![Post](       /media/screenshots/forum_post_detail.png) | ![Create Post](/media/screenshots/forum_post_form.png)        |
-| ![Test](       /media/screenshots/forum_test_detail.png) | ![Take Test](  /media/screenshots/forum_take_test.png)        |
-| ![Create Test](/media/screenshots/forum_test_form.png)   | ![Grade Test]( /media/screenshots/forum_grade_submission.png) |
+|                                                               |                                                              |
+|:-------------------------------------------------------------:|:------------------------------------------------------------:|
+| ![Homepage](   /media/screenshots/home_index.png)             | ![Profile](      /media/screenshots/accounts_index.png)      |
+| ![Post](       /media/screenshots/forum_post_detail.png)      | ![Create Post](  /media/screenshots/forum_post_form.png)     |
+| ![Test](       /media/screenshots/forum_test_detail.png)      | ![Take Test](    /media/screenshots/forum_take_test.png)     |
+| ![Create Test](/media/screenshots/forum_test_form.png)        | ![Question Bank](/media/screenshots/forum_question_bank.png) |
+| ![Grade Test]( /media/screenshots/forum_grade_submission.png) | ![Submission](   /media/screenshots/forum_submission.png)    |
 
 ## Main Features
 

@@ -5,6 +5,15 @@
 
 {% block main %}
 <div class="container mt-4">
+    {% if messages %}
+      {% for message in messages %}
+        <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-success{% endif %} alert-dismissible fade show border-0 rounded-card" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {% endfor %}
+    {% endif %}
+
     <nav aria-label="breadcrumb" class="mb-4">
         <ol class="breadcrumb">
             <li class="breadcrumb-item">
@@ -38,7 +47,7 @@
                         {% csrf_token %}
                         
                         {% for answer in essay_answers %}
-                        <div class="card rounded-card shadow-sm mb-4 {% if answer.is_corrected == 1 %}border-success{% elif answer.is_corrected == 0 %}border-danger{% endif %}">
+                        <div class="card rounded-card shadow-sm mb-4 {% if answer.is_correct == 1 %}border-success{% elif answer.is_correct == 0 %}border-danger{% endif %}">
                             <div class="card-header rounded-card-header {% if answer.is_corrected == 1 %}bg-success text-white{% elif answer.is_corrected == 0 %}bg-danger text-white{% else %}bg-light{% endif %}">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <h6 class="mb-0">
@@ -65,7 +74,7 @@
                                         <i class="bi bi-card-text"></i> Câu hỏi:
                                     </h6>
                                     <div class="alert alert-light rounded-card">
-                                        {{ answer.question_content }}
+                                        {{ answer.question_content|linebreaksbr }}
                                     </div>
                                     
                                     {% if answer.word_limit > 0 %}
@@ -80,7 +89,11 @@
                                         <i class="bi bi-chat-left-text"></i> Câu trả lời của sinh viên:
                                     </h6>
                                     <div class="alert alert-info rounded-card">
-                                        {{ answer.answer_content|default:"<em class='text-muted'>Chưa trả lời</em>"|safe }}
+                                        {% if answer.answer_content %}
+                                            {{ answer.answer_content|linebreaksbr }}
+                                        {% else %}
+                                            <em class="text-muted">Chưa trả lời</em>
+                                        {% endif %}
                                     </div>
                                 </div>
                                 
@@ -90,17 +103,17 @@
                                             <i class="bi bi-star"></i> Chấm điểm:
                                         </label>
                                         <div class="btn-group w-100" role="group">
-                                            <input type="radio" class="btn-check" name="grade_{{ answer.answer_id }}" 
-                                                   id="correct_{{ answer.answer_id }}" value="1" 
-                                                   {% if answer.is_corrected == 1 %}checked{% endif %} required>
-                                            <label class="btn btn-outline-success rounded-btn" for="correct_{{ answer.answer_id }}">
+                                            <input type="radio" class="btn-check" name="grade_{{ answer.question_id }}" 
+                                                   id="correct_{{ answer.question_id }}" value="1" 
+                                                   {% if answer.is_correct == 1 %}checked{% endif %} required>
+                                            <label class="btn btn-outline-success rounded-btn" for="correct_{{ answer.question_id }}">
                                                 <i class="bi bi-check-circle"></i> Đúng (1 điểm)
                                             </label>
                                             
-                                            <input type="radio" class="btn-check" name="grade_{{ answer.answer_id }}" 
-                                                   id="incorrect_{{ answer.answer_id }}" value="0"
-                                                   {% if answer.is_corrected == 0 %}checked{% endif %}>
-                                            <label class="btn btn-outline-danger rounded-btn" for="incorrect_{{ answer.answer_id }}">
+                                            <input type="radio" class="btn-check" name="grade_{{ answer.question_id }}" 
+                                                   id="incorrect_{{ answer.question_id }}" value="0"
+                                                   {% if answer.is_correct == 0 %}checked{% endif %}>
+                                            <label class="btn btn-outline-danger rounded-btn" for="incorrect_{{ answer.question_id }}">
                                                 <i class="bi bi-x-circle"></i> Sai (0 điểm)
                                             </label>
                                         </div>
