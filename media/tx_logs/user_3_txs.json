@@ -1,0 +1,11 @@
+[
+  {
+    "type": "checkin",
+    "amount": 5,
+    "currency": "STK",
+    "counterparty": null,
+    "tx_hash": null,
+    "note": "Điểm danh nhận 5 token",
+    "ts": "2025-12-02T21:52:06.411114Z"
+  }
+]

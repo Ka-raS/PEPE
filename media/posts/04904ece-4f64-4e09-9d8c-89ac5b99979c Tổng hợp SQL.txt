@@ -1,0 +1,145 @@
+## **1. SQL LÀ GÌ?**
+- **SQL** (Structured Query Language): Ngôn ngữ truy vấn có cấu trúc, dùng để quản lý và thao tác với cơ sở dữ liệu quan hệ.
+- Dùng để: Truy vấn, thêm, sửa, xóa dữ liệu, tạo và quản lý cấu trúc database.
+
+## **2. CÁC LOẠI LỆNH SQL CHÍNH**
+
+### **A. LỆNH TRUY VẤN DỮ LIỆU**
+```sql
+SELECT * FROM nhan_vien; -- Lấy tất cả dữ liệu từ bảng nhan_vien
+SELECT ten, tuoi FROM nhan_vien; -- Chỉ lấy cột ten và tuoi
+SELECT DISTINCT phong_ban FROM nhan_vien; -- Lấy giá trị không trùng lặp
+```
+
+### **B. LỆNH LỌC DỮ LIỆU (WHERE)**
+```sql
+SELECT * FROM nhan_vien WHERE tuoi > 25;
+SELECT * FROM nhan_vien 
+WHERE phong_ban = 'Kinh doanh' AND luong > 10000000;
+```
+
+### **C. SẮP XẾP DỮ LIỆU (ORDER BY)**
+```sql
+SELECT * FROM nhan_vien ORDER BY tuoi DESC; -- Giảm dần
+SELECT * FROM nhan_vien ORDER BY luong ASC; -- Tăng dần
+```
+
+### **D. THÊM DỮ LIỆU (INSERT)**
+```sql
+INSERT INTO nhan_vien (id, ten, tuoi) 
+VALUES (1, 'Nguyễn Văn A', 28);
+```
+
+### **E. CẬP NHẬT DỮ LIỆU (UPDATE)**
+```sql
+UPDATE nhan_vien 
+SET luong = 12000000 
+WHERE id = 1;
+```
+
+### **F. XÓA DỮ LIỆU (DELETE)**
+```sql
+DELETE FROM nhan_vien WHERE id = 5; -- Xóa bản ghi có id=5
+DELETE FROM nhan_vien; -- XÓA TẤT CẢ DỮ LIỆU (cẩn thận!)
+```
+
+## **3. CÁC HÀM THÔNG DỤNG**
+
+### **Hàm tính toán:**
+```sql
+SELECT COUNT(*) FROM nhan_vien; -- Đếm số bản ghi
+SELECT AVG(luong) FROM nhan_vien; -- Tính trung bình lương
+SELECT SUM(luong) FROM nhan_vien; -- Tính tổng lương
+SELECT MAX(luong), MIN(luong) FROM nhan_vien;
+```
+
+### **Hàm xử lý chuỗi:**
+```sql
+SELECT UPPER(ten) FROM nhan_vien; -- Chữ hoa
+SELECT LOWER(ten) FROM nhan_vien; -- Chữ thường
+SELECT CONCAT(ho, ' ', ten) AS ho_ten FROM nhan_vien;
+```
+
+## **4. NHÓM DỮ LIỆU (GROUP BY)**
+```sql
+SELECT phong_ban, COUNT(*) AS so_nhan_vien
+FROM nhan_vien
+GROUP BY phong_ban
+HAVING COUNT(*) > 5; -- Lọc nhóm
+```
+
+## **5. KẾT NỐI BẢNG (JOIN)**
+```sql
+-- INNER JOIN: Lấy dữ liệu khớp cả 2 bảng
+SELECT nv.ten, pb.ten_phong
+FROM nhan_vien nv
+INNER JOIN phong_ban pb ON nv.phong_ban_id = pb.id;
+
+-- LEFT JOIN: Lấy tất cả bên trái, khớp bên phải
+SELECT nv.ten, pb.ten_phong
+FROM nhan_vien nv
+LEFT JOIN phong_ban pb ON nv.phong_ban_id = pb.id;
+```
+
+## **6. TẠO VÀ QUẢN LÝ BẢNG**
+```sql
+CREATE TABLE nhan_vien (
+    id INT PRIMARY KEY,
+    ten VARCHAR(100) NOT NULL,
+    tuoi INT,
+    luong DECIMAL(10,2),
+    ngay_vao_lam DATE
+);
+
+ALTER TABLE nhan_vien ADD email VARCHAR(100);
+DROP TABLE nhan_vien; -- Xóa bảng
+```
+
+## **7. MỘT SỐ LƯU Ý QUAN TRỌNG**
+1. **SQL không phân biệt hoa thường** với từ khóa (SELECT = select)
+2. Luôn **kiểm tra WHERE** trước khi UPDATE/DELETE
+3. **Sử dụng INDEX** để tối ưu tốc độ truy vấn
+4. **Backup dữ liệu** thường xuyên
+5. **SQL Injection**: Luôn validate và sử dụng parameterized queries
+
+## **8. THỰC HÀNH CƠ BẢN**
+```sql
+-- Tạo database
+CREATE DATABASE quan_ly_nhan_su;
+
+-- Tạo bảng
+CREATE TABLE nhan_vien (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    ho_ten VARCHAR(100) NOT NULL,
+    ngay_sinh DATE,
+    dia_chi VARCHAR(200)
+);
+
+-- Thêm dữ liệu
+INSERT INTO nhan_vien (ho_ten, ngay_sinh, dia_chi)
+VALUES 
+('Trần Thị B', '1990-05-15', 'Hà Nội'),
+('Lê Văn C', '1992-08-22', 'TP.HCM');
+
+-- Truy vấn phức tạp hơn
+SELECT 
+    ho_ten,
+    YEAR(CURRENT_DATE) - YEAR(ngay_sinh) AS tuoi,
+    CASE 
+        WHEN YEAR(CURRENT_DATE) - YEAR(ngay_sinh) > 30 THEN 'Trên 30'
+        ELSE '30 hoặc trẻ hơn'
+    END AS nhom_tuoi
+FROM nhan_vien
+ORDER BY ngay_sinh ASC;
+```
+
+## **9. TÀI NGUYÊN HỌC TẬP**
+- **Thực hành online**: SQLFiddle, W3Schools SQL
+- **Bài tập**: LeetCode, HackerRank (có mục SQL)
+- **Học sâu**: Khóa học "SQL for Data Analysis" trên Udemy/Coursera
+
+## **LỘ TRÌNH HỌC GỢI Ý:**
+1. **Bắt đầu**: SELECT, WHERE, ORDER BY
+2. **Tiếp theo**: JOIN, GROUP BY, hàm tổng hợp
+3. **Nâng cao**: Subquery, Window Functions, Optimization
+4. **Thực tế**: Phân tích dữ liệu với SQL, kết hợp với Python/R

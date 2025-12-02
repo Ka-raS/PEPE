@@ -53,7 +53,7 @@ def subject_posts(subject_id):
                 p.created_at,
                 p.author_id,
                 u.username,
-                COUNT(*)
+                COALESCE(COUNT(c.content), 0) as comment_count
             FROM posts p
             LEFT JOIN users u ON p.author_id = u.id
             LEFT JOIN comments c ON p.id = c.post_id
