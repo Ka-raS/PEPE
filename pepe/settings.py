@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,8 +26,6 @@ SECRET_KEY = "django-insecure-_46x$-rh6(x%8j+*0s*c62)vv^&lx9z6w(9p%ksiod_ll+mz%#
 DEBUG = True
 
 ALLOWED_HOSTS = [
-    'pepe-ptit.pythonanywhere.com',
-    'pepe-ptit.onrender.com',
     'localhost',
     '127.0.0.1'
 ]
@@ -133,3 +132,19 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = FILE_UPLOAD_MAX_MEMORY_SIZE
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+from dotenv import load_dotenv
+load_dotenv()
+
+HSCOIN_API_BASE_URL = os.environ.get('HSCOIN_API_BASE_URL')
+HSCOIN_API_KEY = os.environ.get('HSCOIN_API_KEY')
+
+ADMIN_WALLET_ADDRESS = os.environ.get("ADMIN_WALLET_ADDRESS")
+ADMIN_PRIVATE_KEY = os.environ.get("ADMIN_PRIVATE_KEY")
+
+TOKEN_CONTRACT_ADDRESS = os.environ.get("TOKEN_CONTRACT_ADDRESS")
+STORE_PRIVATE_KEYS_PLAINTEXT = False
+
+FERNET_KEY = os.environ.get("PEPE_CRYPTO_KEY")
+
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')

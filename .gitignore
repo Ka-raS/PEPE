@@ -2,6 +2,8 @@
 .vscode/
 **/__pycache__/
 
+.env
+
 # media/
 # example.sqlite3
 tables.sql
