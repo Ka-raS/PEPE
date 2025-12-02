@@ -120,10 +120,7 @@
                                         </small>
                                     </div>
                                     <div class="btn-group">
-                                        <a href="{{ post.attachment.url }}" class="btn btn-outline-primary" target="_blank">
-                                            <i class="bi bi-eye"></i> Xem
-                                        </a>
-                                        <a href="{{ post.attachment.url }}" download class="btn btn-outline-success">
+                                        <a href="#" class="btn btn-outline-success" id="download-attachment-btn">
                                             <i class="bi bi-download"></i> Tải xuống
                                         </a>
                                     </div>
@@ -415,4 +412,41 @@
     transform: translateY(-1px);
 }
 </style>
+{% endblock %}
+
+{% block script %}
+<script>
+var isOwner = {% if post.author.id == current_user_id %}true{% else %}false{% endif %};
+var hasBought = {% if has_bought_attachment %}true{% else %}false{% endif %};
+document.getElementById("download-attachment-btn").onclick = function(e) {
+    e.preventDefault();
+    if (!isOwner && !hasBought) {
+        if (!confirm("Bạn sẽ tiêu 5 token để tải file này. Tiếp tục?")) return;
+    }
+    fetch("{% url 'forum:api_pay_for_attachment' %}", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": "{{ csrf_token }}"
+        },
+        body: JSON.stringify({post_id: {{ post.id }}})
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            setTimeout(function(){
+                var a = document.createElement('a');
+                a.href = "{{ post.attachment.url }}";
+                a.download = "{{ post.filename }}";
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            }, 1200);
+        } else {
+            alert(data.message);
+        }
+    });
+};
+</script>
 {% endblock %}

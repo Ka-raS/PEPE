@@ -397,7 +397,7 @@ def api_deposit(request):
 
         user_address, encrypted_pk = row
         if not user_address:
-            return JsonResponse({'success': False, 'message': 'Lỗi dữ liệu ví'})
+            return JsonResponse({'success': False, 'message': 'Lỗi Ví Coin. Bạn đã liên kết ví chưa?'})
 
         # Giải mã private key
         private_key = None
@@ -525,7 +525,7 @@ def api_transfer_p2p(request):
             return JsonResponse({'success': False, 'message': 'Chưa liên kết ví'})
         sender_addr, encrypted_pk = row
         if not sender_addr:
-            return JsonResponse({'success': False, 'message': 'Lỗi dữ liệu ví'})
+            return JsonResponse({'success': False, 'message': 'Lỗi Ví Coin. Bạn đã liên kết ví chưa?'})
 
         private_key = None
         if encrypted_pk:

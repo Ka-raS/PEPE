@@ -14,6 +14,7 @@ urlpatterns = [
     path('post/<int:post_id>/vote/', views.vote_post, name='vote_post'),
     path('post/<int:post_id>/comment/', views.add_comment, name='add_comment'),
     re_path(r'^comment/(?P<comment_id>[^/]+)/delete/$', views.delete_comment, name='delete_comment'),
+    path('api/pay_for_attachment/', views.api_pay_for_attachment, name='api_pay_for_attachment'),
 
     path('create_test/<int:subject_id>/', views.create_test, name='create_test'),
     path('take_test/<int:test_id>/', views.take_test, name='take_test'),

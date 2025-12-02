@@ -527,6 +527,17 @@ def post_detail(request, post_id):
         """, [post['author']['id']])
         author_post_count = cursor.fetchone()[0]
         
+    user_id = request.session.get('user_id')
+    has_bought_attachment = False
+    if user_id:
+        if post['author']['id'] == user_id:
+            has_bought_attachment = True
+        else:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT 1 FROM post_buy WHERE post_id = %s AND buyer_id = %s", [post_id, user_id])
+                if cursor.fetchone():
+                    has_bought_attachment = True
+
     context = {
         'is_authenticated': request.session.get('user_id') is not None,
         'username': request.session.get('username'),
@@ -535,7 +546,8 @@ def post_detail(request, post_id):
         'related_posts': related_posts,
         'is_authenticated': request.session.get('user_id') is not None,
         'current_user_id': request.session.get('user_id'),
-        'author_post_count': author_post_count
+        'author_post_count': author_post_count,
+        'has_bought_attachment': has_bought_attachment
     }
     return render(request, 'forum/post_detail.html', context)
 
@@ -1680,3 +1692,67 @@ def grade_submission(request, submission_id):
     }
     
     return render(request, 'forum/grade_submission.html', context)
+
+from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+
+@csrf_exempt
+@require_POST
+def api_pay_for_attachment(request):
+    user_id = request.session.get('user_id')
+    if not user_id:
+        return JsonResponse({'success': False, 'message': 'Vui lòng đăng nhập'}, status=401)
+    try:
+        data = json.loads(request.body)
+        post_id = data.get('post_id')
+        if not post_id:
+            return JsonResponse({'success': False, 'message': 'Thiếu post_id'}, status=400)
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT author_id FROM posts WHERE id = %s", [post_id])
+            row = cursor.fetchone()
+            if not row:
+                return JsonResponse({'success': False, 'message': 'Không tìm thấy bài đăng'}, status=404)
+            author_id = row[0]
+        if author_id == user_id:
+            return JsonResponse({'success': True, 'message': 'Bạn là chủ bài đăng, không cần trả phí để tải tài liệu.'})
+
+        # Kiểm tra đã từng mua chưa
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1 FROM post_buy WHERE post_id = %s AND buyer_id = %s", [post_id, user_id])
+            if cursor.fetchone():
+                return JsonResponse({'success': True, 'message': 'Bạn đã trả phí cho file này, tải thoải mái.'})
+
+        # Lấy ví người xem và chủ bài đăng
+        from accounts.views import get_user_wallet
+        viewer_wallet = get_user_wallet(user_id)
+        author_wallet = get_user_wallet(author_id)
+        if not viewer_wallet or not author_wallet:
+            return JsonResponse({'success': False, 'message': 'Chưa liên kết ví'}, status=400)
+        viewer_addr, viewer_pk = viewer_wallet
+        author_addr, _ = author_wallet
+        if not viewer_addr or not author_addr:
+            return JsonResponse({'success': False, 'message': 'Lỗi Ví Coin. Bạn đã liên kết ví chưa?'}, status=400)
+        
+        from accounts.crypto_utils import decrypt_key
+        private_key = decrypt_key(viewer_pk) if viewer_pk else None
+
+        from accounts.utils import user_transfer_tokens
+        token_count = 5
+        success, result = user_transfer_tokens(viewer_addr, author_addr, token_count, private_key)
+        if success:
+            # Lưu vào post_buy để lần sau không bị trừ nữa
+            with connection.cursor() as cursor:
+                cursor.execute("INSERT INTO post_buy (post_id, buyer_id) VALUES (%s, %s)", [post_id, user_id])
+            return JsonResponse({
+                'success': True,
+                'message': f'Bạn đã trả {token_count} token thành công! File sẽ được tải xuống.',
+                'tx_hash': result
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'message': f'Giao dịch thất bại vì không đủ số dư: {result}'
+            })
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)})
