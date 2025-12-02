@@ -2,12 +2,14 @@ import json
 import google.generativeai as genai
 import accounts.sql
 import forum.sql
+from accounts.utils import hscoin_get_balance
 
 from django.shortcuts import render
 from django.db import connection
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
+
 
 def index(request):
     user_id = request.session.get('user_id')
@@ -23,6 +25,38 @@ def index(request):
             'is_authenticated': True,
             'username': request.session.get('username'),
         }
+        # Determine HS token balance and whether user can check in
+        try:
+            user_data = accounts.sql.one_user(user_id=user_id)
+            last = user_data.get('last_checkin') if user_data else None
+            from datetime import date, datetime
+            today = date.today()
+            can_checkin = True
+            if last:
+                if isinstance(last, str):
+                    try:
+                        last_date = datetime.strptime(last, '%Y-%m-%d').date()
+                    except Exception:
+                        last_date = None
+                elif isinstance(last, (date,)):
+                    last_date = last
+                else:
+                    last_date = None
+
+                if last_date == today:
+                    can_checkin = False
+            context['last_checkin'] = last
+            context['can_checkin'] = can_checkin
+        except Exception:
+            context['last_checkin'] = None
+            context['can_checkin'] = True
+
+        # Get balance if wallet exists
+        try:
+            wallet_addr = accounts.sql.get_user_wallet(user_id)
+            context['hs_balance'] = hscoin_get_balance(wallet_addr) if wallet_addr else 0
+        except Exception:
+            context['hs_balance'] = 0
     
     context['suggested_posts'] = forum.sql.posts_with_attachment(5)
     context['popular_posts'] = forum.sql.popular_posts(5)
@@ -30,13 +64,6 @@ def index(request):
     context['latest_tests'] = forum.sql.latest_tests(5)
 
     return render(request, 'home/index.html', context)
-
-try:
-    genai.configure(api_key=settings.GEMINI_API_KEY)
-    model = genai.GenerativeModel('gemini-2.5-flash')
-except Exception as e:
-    print(f"Lỗi cấu hình Gemini AI: {e}")
-    model = None
 
 # --- API CHATBOT ---
 SYSTEM_KNOWLEDGE = """

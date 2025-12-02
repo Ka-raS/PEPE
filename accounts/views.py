@@ -323,6 +323,86 @@ def get_user_wallet(user_id):
         cursor.execute("SELECT wallet_address, encrypted_private_key FROM students WHERE id = %s", [user_id])
         return cursor.fetchone()
 
+# ======================================================
+# 6. API ĐIỂM DANH HẰNG NGÀY (ADMIN MINT 5 TOKEN)
+# ======================================================
+@require_POST
+def api_checkin(request):
+    user_id = request.session.get('user_id')
+    if not user_id:
+        return JsonResponse({'success': False, 'message': 'Vui lòng đăng nhập'}, status=401)
+
+    try:
+        user_data = sql.one_user(user_id=user_id)
+        if not user_data:
+            return JsonResponse({'success': False, 'message': 'Không tìm thấy người dùng'}, status=404)
+
+        last = user_data.get('last_checkin')
+        from datetime import date, datetime
+        today = date.today()
+        if last:
+            # Normalize to date
+            if isinstance(last, str):
+                try:
+                    last_date = datetime.strptime(last, '%Y-%m-%d').date()
+                except Exception:
+                    # fallback
+                    last_date = None
+            elif isinstance(last, (date,)):
+                last_date = last
+            else:
+                last_date = None
+
+            if last_date == today:
+                return JsonResponse({'success': False, 'message': 'Bạn đã điểm danh hôm nay'}, status=400)
+
+        # Get wallet address
+        row = get_user_wallet(user_id)
+        if not row or not row[0]:
+            return JsonResponse({'success': False, 'message': 'Chưa liên kết ví'}, status=400)
+
+        user_address = row[0]
+        # Mint 5 tokens
+        amount = 5
+        success, result = admin_mint_tokens(user_address, amount)
+        if not success:
+            return JsonResponse({'success': False, 'message': f'Lỗi Blockchain: {result}'}, status=500)
+
+        # Update last_checkin
+        sql.update_last_checkin(user_id, today.isoformat())
+
+        # Append user tx log
+        try:
+            from .utils import append_user_tx
+            append_user_tx(user_id, {
+                'type': 'checkin',
+                'amount': amount,
+                'currency': 'STK',
+                'counterparty': None,
+                'tx_hash': result if isinstance(result, str) else None,
+                'note': 'Điểm danh nhận 5 token',
+            })
+        except Exception:
+            pass
+
+        # Get updated balance
+        try:
+            bal = hscoin_get_balance(user_address)
+        except Exception:
+            bal = 0.0
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Điểm danh thành công! Đã gửi {amount} token đến ví {user_address}',
+            'balance': bal,
+            'tx': result
+        })
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
 
 # ======================================================
 # 1. API: LIÊN KẾT VÍ THỦ CÔNG

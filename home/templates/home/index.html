@@ -162,10 +162,89 @@
               </div>                
             </div>
           </div>
+          <!-- Wallet / Checkin -->
+          {% if is_authenticated %}
+          <div class="card shadow-sm border-0 rounded-card mt-3">
+            <div class="card-header bg-secondary text-white rounded-card-header">
+              <h5 class="card-title mb-0">
+                <i class="bi bi-wallet2"></i> Ví Token
+              </h5>
+            </div>
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <div>
+                  <div class="small text-muted">Số dư</div>
+                  <div class="fw-bold" id="hs-balance">{{ hs_balance|default:0 }}</div>
+                </div>
+                <button id="btn-checkin" class="btn btn-outline-success rounded-btn">Điểm danh +5</button>
+              </div>
+              <div class="small text-muted" id="last-checkin">{% if last_checkin %}Đã điểm danh: {{ last_checkin }}{% else %}Chưa điểm danh{% endif %}</div>
+            </div>
+          </div>
+          {% endif %}
         </div>
       </div>
     </div>
   </div>
 </div>
 
+{% endblock %}
+
+{% block script %}
+<script>
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    const btn = document.getElementById('btn-checkin');
+    if(!btn) return;
+    if({% if can_checkin %}true{% else %}false{% endif %} === false){
+      btn.disabled = true;
+      btn.innerText = 'Đã điểm danh';
+    }
+
+    btn.addEventListener('click', async function(){
+      btn.disabled = true;
+      btn.innerText = 'Đang điểm danh...';
+      try{
+        const csrftoken = getCookie('csrftoken');
+        const res = await fetch('{% url "accounts:api_checkin" %}', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrftoken
+          },
+          body: JSON.stringify({})
+        });
+        const data = await res.json();
+        if(data.success){
+          document.getElementById('hs-balance').innerText = data.balance || 0;
+          document.getElementById('last-checkin').innerText = 'Đã điểm danh: ' + new Date().toISOString().split('T')[0];
+          alert(data.message || 'Điểm danh thành công');
+          btn.innerText = 'Đã điểm danh';
+        } else {
+          alert(data.message || 'Lỗi điểm danh');
+          btn.disabled = false;
+          btn.innerText = 'Điểm danh +5';
+        }
+      } catch (e) {
+        alert('Lỗi kết nối');
+        btn.disabled = false;
+        btn.innerText = 'Điểm danh +5';
+      }
+    });
+  });
+  </script>
 {% endblock %}

@@ -19,7 +19,7 @@ def one_user(user_id=None, username=None, email=None):
 
     with connection.cursor() as cursor:
         cursor.execute(f"""
-            SELECT id, username, password, email, first_name, last_name, avatar_path
+            SELECT id, username, password, email, first_name, last_name, avatar_path, last_checkin
             FROM users 
             WHERE {' OR '.join(query_conditions)}
         """, [i for i in (user_id, username, email) if i is not None])
@@ -32,7 +32,8 @@ def one_user(user_id=None, username=None, email=None):
             'email': row[3],
             'first_name': row[4],
             'last_name': row[5],
-            'avatar_path': row[6]
+            'avatar_path': row[6],
+            'last_checkin': row[7],  # Thêm dòng này
         } if row else None
 
 def one_student(user_id):
@@ -257,4 +258,18 @@ def user_recent_tests(user_id, count):
             }
             for row in cursor.fetchall()
         ]
+
+
+def update_last_checkin(user_id, checkin_date):
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            UPDATE users SET last_checkin = %s WHERE id = %s
+        """, [checkin_date, user_id])
+
+
+def get_user_wallet(user_id):
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT wallet_address FROM students WHERE id = %s", [user_id])
+        row = cursor.fetchone()
+        return row[0] if row and row[0] else None
     

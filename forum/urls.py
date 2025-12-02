@@ -23,8 +23,11 @@ urlpatterns = [
     path('create_question/<int:subject_id>/', views.create_question, name='create_question'),
     path('question_bank/<int:subject_id>/', views.question_bank, name='question_bank'),
     path('add_questions_to_test/<int:test_id>/', views.add_questions_to_test, name='add_questions_to_test'),
+    path('api/pay_for_test/', views.api_pay_for_test, name='api_pay_for_test'),
 
     path('submission/<int:submission_id>/', views.submission_detail, name='submission_detail'),
     path('submissions_history/<int:test_id>/', views.submissions_history, name='submissions_history'),
     path('submission/<int:submission_id>/grade/', views.grade_submission, name='grade_submission'),
+
+    path('token_rewards/', views.token_rewards_history, name='token_rewards'),
 ]

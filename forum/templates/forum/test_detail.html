@@ -168,9 +168,17 @@
                             <i class="bi bi-x-circle"></i> Đã hết lượt làm bài
                         </button>
                         {% else %}
-                        <a href="{% url 'forum:take_test' test.id %}" class="btn btn-success btn-lg">
+                        <button 
+                            id="startTestBtn"
+                            class="btn btn-success btn-lg"
+                            data-test-id="{{ test.id }}"
+                            data-required-tokens="{{ test.required_tokens }}"
+                            data-is-author="{{ is_author|yesno:'true,false' }}"
+                            data-has-paid="{{ has_paid|yesno:'true,false' }}"
+                            data-redirect-url="{% url 'forum:take_test' test.id %}"
+                        >
                             <i class="bi bi-play-circle"></i> Bắt đầu làm bài
-                        </a>
+                        </button>
                         {% endif %}
                         {% else %}
                         <button class="btn btn-secondary btn-lg" disabled>
@@ -325,46 +333,56 @@
 {% endblock %}
 
 {% block script %}
-
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Xử lý nút bắt đầu làm bài
     const startTestBtn = document.getElementById('startTestBtn');
     if (startTestBtn) {
         startTestBtn.addEventListener('click', function() {
-            window.location.href = "{% url 'forum:take_test' test.id %}";
+            const testId = this.dataset.testId;
+            const requiredTokens = parseInt(this.dataset.requiredTokens);
+            const isAuthor = this.dataset.isAuthor === 'true';
+            const hasPaid = this.dataset.hasPaid === 'true';
+            const redirectUrl = this.dataset.redirectUrl;
+
+            // Nếu là tác giả hoặc đã trả token thì chuyển thẳng
+            if (isAuthor || hasPaid || requiredTokens <= 0) {
+                window.location.href = redirectUrl;
+                return;
+            }
+
+            // Chỉ lần đầu mới xác nhận và gọi API
+            if (!confirm(`Bạn sẽ tiêu ${requiredTokens} token để làm bài kiểm tra này. Tiếp tục?`)) {
+                return;
+            }
+
+            fetch("{% url 'forum:api_pay_for_test' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({ 
+                    test_id: testId,
+                    required_tokens: requiredTokens 
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    setTimeout(function() {
+                        window.location.href = redirectUrl;
+                    }, 1200);
+                } else {
+                    alert(data.message || 'Không thể bắt đầu làm bài. Vui lòng thử lại!');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Có lỗi xảy ra, vui lòng thử lại.');
+            });
         });
     }
-
-    // Xử lý countdown timer nếu có
-    const dueDateElement = document.getElementById('dueDateCountdown');
-    if (dueDateElement) {
-        const dueDate = new Date(dueDateElement.dataset.dueDate);
-        const now = new Date();
-        
-        if (dueDate > now) {
-            const diff = dueDate - now;
-            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            
-            dueDateElement.textContent = 'Còn ' + days + ' ngày ' + hours + ' giờ';
-        } else {
-            dueDateElement.textContent = 'Đã hết hạn';
-            dueDateElement.classList.add('text-danger');
-        }
-    }
-
-    // Chỉ ẩn alert thông báo (messages từ Django), KHÔNG ẩn alert thông tin
-    const messageAlerts = document.querySelectorAll('.alert.alert-dismissible');
-    messageAlerts.forEach(function(alert) {
-        setTimeout(function() {
-            alert.style.opacity = '0';
-            setTimeout(function() {
-                alert.remove();
-            }, 1000);
-        }, 5000);
-    });
 });
 </script>
-
 {% endblock %}

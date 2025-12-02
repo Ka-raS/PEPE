@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+
+{% block title %}Lịch Sử Nhận Token{% endblock %}
+
+{% block main %}
+<div class="container my-4">
+    <h2><i class="bi bi-token"></i> Lịch Sử Nhận Token Thưởng</h2>
+    
+    <div class="card shadow-sm">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0">
+                <i class="bi bi-gift"></i> Tổng token đã nhận: 
+                <span class="token-badge">{{ total_token_rewards }}</span>
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if token_transactions %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Thời gian</th>
+                            <th>Loại</th>
+                            <th>Số lượng</th>
+                            <th>Ghi chú</th>
+                            <th>Hash</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tx in token_transactions %}
+                        <tr>
+                            <td>{{ tx.ts }}</td>
+                            <td>
+                                <span class="badge bg-{{ tx.tx_type|default:'info' }}">
+                                    {{ tx.type|default:"Thưởng" }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="token-profit-positive">
+                                    <i class="bi bi-plus-circle"></i> {{ tx.amount }} token
+                                </span>
+                            </td>
+                            <td>{{ tx.note }}</td>
+                            <td>
+                                {% if tx.tx_hash %}
+                                <small class="font-monospace">{{ tx.tx_hash|truncatechars:20 }}</small>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-inbox display-1 text-muted"></i>
+                <p class="text-muted mt-3">Chưa có lịch sử nhận token nào</p>
+                <p class="text-muted">Hãy tham gia làm bài kiểm tra và làm đúng 100% câu trắc nghiệm để nhận token!</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="mt-3">
+        <a href="{% url 'wallet:index' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Quay lại ví
+        </a>
+    </div>
+</div>
+{% endblock %}

@@ -159,5 +159,29 @@ class Migration(migrations.Migration):
                 FOREIGN KEY(post_id) REFERENCES posts(id) ON DELETE CASCADE,
                 FOREIGN KEY(buyer_id) REFERENCES users(id) ON DELETE CASCADE
             );
+
+            CREATE TABLE test_payments (
+                test_id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL,
+                paid_at DATETIME NOT NULL DEFAULT (datetime('now', 'localtime')),
+                PRIMARY KEY (test_id, user_id),
+                FOREIGN KEY (test_id) REFERENCES tests(id) ON DELETE CASCADE,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            );
+                          
+            CREATE TABLE IF NOT EXISTS token_rewards (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                submission_id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL,
+                reward_amount INTEGER NOT NULL DEFAULT 0,
+                tx_hash VARCHAR(255),
+                reward_type VARCHAR(50) NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (submission_id) REFERENCES submissions (id) ON DELETE CASCADE,
+                FOREIGN KEY (user_id) REFERENCES auth_user (id) ON DELETE CASCADE
+            );
+            CREATE INDEX IF NOT EXISTS idx_token_rewards_user_id ON token_rewards(user_id);
+            CREATE INDEX IF NOT EXISTS idx_token_rewards_submission_id ON token_rewards(submission_id);
+            CREATE INDEX IF NOT EXISTS idx_token_rewards_created_at ON token_rewards(created_at);
         """),
     ]

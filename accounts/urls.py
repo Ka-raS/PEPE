@@ -14,6 +14,7 @@ urlpatterns = [
     path('api/link-wallet/', views.api_link_wallet, name='api_link_wallet'),
     path('api/unlink-wallet/', views.unlink_wallet, name='unlink_wallet'),
     path('api/get-balance/', views.api_get_balance, name='api_get_balance'),
+    path('api/checkin', views.api_checkin, name='api_checkin'),
     path('api/deposit/', views.api_deposit, name='api_deposit'),
     path('api/withdraw/', views.api_withdraw, name='api_withdraw'),
     path('api/transfer/', views.api_transfer_p2p, name='api_transfer_p2p'),

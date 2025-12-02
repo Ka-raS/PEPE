@@ -13,7 +13,7 @@ from django.shortcuts import render, redirect
 
 import accounts.sql
 from . import sql
-
+from accounts.utils import admin_mint_tokens
 
 def index(request):
     return render(request, 'forum/index.html', {
@@ -814,6 +814,8 @@ def test_detail(request, test_id):
         messages.warning(request, 'Vui lòng đăng nhập để tiếp tục')
         return redirect('accounts:login')
     
+    user_id = request.session['user_id']
+    
     with connection.cursor() as cursor:
         cursor.execute("""
             SELECT 
@@ -842,19 +844,24 @@ def test_detail(request, test_id):
             'max_attempts': row[6],
             'subject_id': row[7],
             'author_id': row[8],
-            'is_active': row[9]
+            'is_active': row[9],
+            'required_tokens': 1
         }
     
-        user_id = request.session.get('user_id')
-        if user_id:
-            cursor.execute("""
-                SELECT COUNT(*) FROM submissions 
-                WHERE test_id = %s AND author_id = %s
-            """, [test_id, user_id])
-            current_user_attempts = cursor.fetchone()[0]
-        else:
-            current_user_attempts = 0
-
+        # Đếm số lần làm bài
+        cursor.execute("""
+            SELECT COUNT(*) FROM submissions 
+            WHERE test_id = %s AND author_id = %s
+        """, [test_id, user_id])
+        current_user_attempts = cursor.fetchone()[0]
+        
+        # Kiểm tra đã thanh toán chưa
+        cursor.execute("""
+            SELECT 1 FROM test_payments 
+            WHERE test_id = %s AND user_id = %s
+        """, [test_id, user_id])
+        has_paid = cursor.fetchone() is not None
+    
     # Tính toán remaining attempts
     remaining_attempts = test['max_attempts'] - current_user_attempts
     progress_percent = (current_user_attempts / test['max_attempts'] * 100) if test['max_attempts'] > 0 else 0
@@ -866,10 +873,10 @@ def test_detail(request, test_id):
         'progress_percent': int(progress_percent),
         'is_authenticated': True,
         'username': request.session.get('username'),
-        'is_author': user_id == test.get('author_id')
+        'is_author': user_id == test.get('author_id'),
+        'has_paid': has_paid or (user_id == test.get('author_id'))  # Tác giả coi như đã thanh toán
     }
     return render(request, 'forum/test_detail.html', context)
-
 
 def create_question(request, subject_id):
     """Tạo câu hỏi mới"""
@@ -1013,7 +1020,11 @@ def take_test(request, test_id):
     try:
         with connection.cursor() as cursor:
             # Kiểm tra test
-            cursor.execute("SELECT id, title, time_limit, max_attempts FROM tests WHERE id = %s", [test_id])
+            cursor.execute("""
+                SELECT id, title, time_limit, max_attempts, 
+                       author_id
+                FROM tests WHERE id = %s
+            """, [test_id])
             test_row = cursor.fetchone()
             
             if not test_row:
@@ -1024,8 +1035,22 @@ def take_test(request, test_id):
                 'id': test_row[0],
                 'title': test_row[1],
                 'time_limit': test_row[2] or 60,
-                'max_attempts': test_row[3] or 1
+                'max_attempts': test_row[3] or 1,
+                'required_tokens': 1,
+                'author_id': test_row[4]
             }
+            
+            # Kiểm tra quyền làm bài
+            is_author = (user_id == test_info['author_id'])
+            
+            # Nếu không phải tác giả, kiểm tra thanh toán
+            if not is_author:
+                cursor.execute("""
+                    SELECT 1 FROM test_payments 
+                    WHERE test_id = %s AND user_id = %s
+                """, [test_id, user_id])
+                if not cursor.fetchone():
+                    messages.error(request, f'Bạn cần thanh toán {test_info["required_tokens"]} token để làm bài kiểm tra này')
             
             # Kiểm tra số lần nộp
             cursor.execute("""
@@ -1040,7 +1065,7 @@ def take_test(request, test_id):
         
         # POST - Nộp bài
         if request.method == 'POST':
-            return handle_test_submission(request, test_id, user_id, attempt_count)
+            return handle_test_submission(request, test_id, user_id, attempt_count, is_author)
         
         # GET - Hiển thị bài kiểm tra
         return display_test(request, test_id, user_id, attempt_count, test_info)
@@ -1049,9 +1074,8 @@ def take_test(request, test_id):
         messages.error(request, f'Có lỗi xảy ra: {str(e)}')
         return redirect('forum:index')
 
-
-def handle_test_submission(request, test_id, user_id, attempt_count):
-    """Xử lý nộp bài - chấm tự động trắc nghiệm"""
+def handle_test_submission(request, test_id, user_id, attempt_count, is_author=False):
+    """Xử lý nộp bài - chấm tự động trắc nghiệm và thưởng token"""
     try:
         with connection.cursor() as cursor:
             # Tạo submission
@@ -1062,7 +1086,7 @@ def handle_test_submission(request, test_id, user_id, attempt_count):
             """, [test_id, user_id, attempt_count + 1, time_spent])
             submission_id = cursor.lastrowid
             
-            # Lấy danh sách câu hỏi
+            # Lấy danh sách câu hỏi và đáp án đúng
             cursor.execute("""
                 SELECT 
                     tq.question_id,
@@ -1082,13 +1106,21 @@ def handle_test_submission(request, test_id, user_id, attempt_count):
             
             questions = cursor.fetchall()
             
+            # Đếm số câu trắc nghiệm và số câu đúng
+            total_multiple_choice = 0
+            correct_multiple_choice = 0
+            
             for question_id, question_type, correct_option_id in questions:
                 user_answer = request.POST.get(f'answer_{question_id}', '').strip()
                 
                 if question_type == 'multiple_choice' and user_answer:
-                    # user_answer giờ là option_id -> lưu trực tiếp vào multiple_choice_answers
+                    total_multiple_choice += 1
+                    
                     try:
                         selected_option_id = int(user_answer)
+                        # Kiểm tra xem đáp án có đúng không
+                        if selected_option_id == correct_option_id:
+                            correct_multiple_choice += 1
                     except ValueError:
                         selected_option_id = None
                     
@@ -1104,8 +1136,41 @@ def handle_test_submission(request, test_id, user_id, attempt_count):
                         INSERT INTO essay_answers (content, is_correct, submission_id, essay_question_id)
                         VALUES (%s, NULL, %s, %s)
                     """, [user_answer, submission_id, question_id])
+            
+            # KIỂM TRA VÀ THƯỞNG TOKEN NẾU LÀM ĐÚNG TẤT CẢ CÂU TRẮC NGHIỆM
+            if not is_author and total_multiple_choice > 0 and correct_multiple_choice == total_multiple_choice:
+                # Lấy địa chỉ ví của người dùng
+                cursor.execute("""
+                    SELECT wallet_address FROM students WHERE id = %s
+                """, [user_id])
+
+                wallet_row = cursor.fetchone()
+                if wallet_row and wallet_row[0]:
+                    receiver_address = wallet_row[0]
+
+                    # Số token thưởng (chỉ 1 token)
+                    reward_amount = 1  # 1 token
+
+                    # Gọi hàm admin_mint_tokens để thưởng
+                    try:
+                        tx_hash = admin_mint_tokens(receiver_address, reward_amount)
+
+                        # Lưu thông tin thưởng vào database
+                        cursor.execute("""
+                            INSERT INTO token_rewards 
+                            (submission_id, user_id, reward_amount, tx_hash, reward_type)
+                            VALUES (%s, %s, %s, %s, 'full_multiple_choice_correct')
+                        """, [submission_id, user_id, reward_amount, tx_hash])
+
+                    except Exception as e:
+                        print(f"Lỗi khi thưởng token: {str(e)}")
         
         messages.success(request, 'Nộp bài thành công!')
+        
+        # Thêm thông báo nếu được thưởng token
+        if not is_author and total_multiple_choice > 0 and correct_multiple_choice == total_multiple_choice:
+            messages.success(request, f'Chúc mừng! Bạn đã làm đúng toàn bộ {total_multiple_choice} câu trắc nghiệm và nhận được 1 token thưởng!')
+        
         return redirect('forum:submission_detail', submission_id=submission_id)
         
     except Exception as e:
@@ -1737,13 +1802,33 @@ def api_pay_for_attachment(request):
         from accounts.crypto_utils import decrypt_key
         private_key = decrypt_key(viewer_pk) if viewer_pk else None
 
-        from accounts.utils import user_transfer_tokens
+        from accounts.utils import user_transfer_tokens, append_user_tx
         token_count = 5
         success, result = user_transfer_tokens(viewer_addr, author_addr, token_count, private_key)
         if success:
             # Lưu vào post_buy để lần sau không bị trừ nữa
             with connection.cursor() as cursor:
                 cursor.execute("INSERT INTO post_buy (post_id, buyer_id) VALUES (%s, %s)", [post_id, user_id])
+
+            # --- GHI LỊCH SỬ GIAO DỊCH CHO CẢ 2 NGƯỜI ---
+            append_user_tx(user_id, {
+                "type": "spend",
+                "amount": token_count,
+                "currency": "HSCoin",
+                "note": f"Mua tài liệu từ bài viết #{post_id}",
+                "counterparty": author_addr,
+                "tx_hash": result
+            })
+            append_user_tx(author_id, {
+                "type": "receive",
+                "amount": token_count,
+                "currency": "HSCoin",
+                "note": f"Nhận token từ bán tài liệu bài viết #{post_id}",
+                "counterparty": viewer_addr,
+                "tx_hash": result
+            })
+            # --- HẾT GHI LỊCH SỬ ---
+
             return JsonResponse({
                 'success': True,
                 'message': f'Bạn đã trả {token_count} token thành công! File sẽ được tải xuống.',
@@ -1754,5 +1839,148 @@ def api_pay_for_attachment(request):
                 'success': False,
                 'message': f'Giao dịch thất bại vì không đủ số dư: {result}'
             })
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)})
+
+import json
+from django.db import connection
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+
+def token_rewards_history(request):
+    """Lịch sử nhận thưởng token"""
+    if not request.session.get('user_id'):
+        messages.warning(request, 'Vui lòng đăng nhập để tiếp tục')
+        return redirect('accounts:login')
+    
+    user_id = request.session['user_id']
+    
+    with connection.cursor() as cursor:
+        # Lấy lịch sử thưởng
+        cursor.execute("""
+            SELECT 
+                tr.id,
+                tr.reward_amount,
+                tr.tx_hash,
+                tr.reward_type,
+                tr.created_at,
+                s.test_id,
+                t.title as test_title
+            FROM token_rewards tr
+            LEFT JOIN submissions s ON tr.submission_id = s.id
+            LEFT JOIN tests t ON s.test_id = t.id
+            WHERE tr.user_id = %s
+            ORDER BY tr.created_at DESC
+        """, [user_id])
+        
+        rewards = []
+        for row in cursor.fetchall():
+            rewards.append({
+                'id': row[0],
+                'reward_amount': row[1],
+                'tx_hash': row[2],
+                'reward_type': row[3],
+                'created_at': row[4],
+                'test_id': row[5],
+                'test_title': row[6] or "N/A"
+            })
+        
+        # Tính tổng token đã nhận
+        cursor.execute("""
+            SELECT COALESCE(SUM(reward_amount), 0) 
+            FROM token_rewards 
+            WHERE user_id = %s
+        """, [user_id])
+        total_rewards = cursor.fetchone()[0]
+    
+    context = {
+        'rewards': rewards,
+        'total_rewards': total_rewards,
+        'is_authenticated': True,
+        'username': request.session.get('username'),
+    }
+    
+    return render(request, 'forum/token_rewards_history.html', context)
+
+@csrf_exempt
+@require_POST
+def api_pay_for_test(request):
+    """API thanh toán token để làm bài kiểm tra"""
+    user_id = request.session.get('user_id')
+    if not user_id:
+        return JsonResponse({'success': False, 'message': 'Vui lòng đăng nhập'}, status=401)
+    
+    try:
+        data = json.loads(request.body)
+        test_id = data.get('test_id')
+        required_tokens = data.get('required_tokens', 1)
+        
+        if not test_id:
+            return JsonResponse({'success': False, 'message': 'Thiếu test_id'}, status=400)
+        
+        with connection.cursor() as cursor:
+            # Kiểm tra test tồn tại
+            cursor.execute("SELECT author_id FROM tests WHERE id = %s", [test_id])
+            row = cursor.fetchone()
+            if not row:
+                return JsonResponse({'success': False, 'message': 'Không tìm thấy bài kiểm tra'}, status=404)
+            
+            author_id = row[0]
+            
+            # Nếu là tác giả, không cần trả token
+            if author_id == user_id:
+                return JsonResponse({
+                    'success': True, 
+                    'message': 'Bạn là tác giả bài kiểm tra, không cần trả token.'
+                })
+            
+            # Kiểm tra đã thanh toán chưa
+            cursor.execute("SELECT 1 FROM test_payments WHERE test_id = %s AND user_id = %s", [test_id, user_id])
+            if cursor.fetchone():
+                return JsonResponse({
+                    'success': True, 
+                    'message': 'Bạn đã thanh toán cho bài kiểm tra này.'
+                })
+            
+            # Lấy thông tin ví
+            from accounts.views import get_user_wallet
+            viewer_wallet = get_user_wallet(user_id)
+            author_wallet = get_user_wallet(author_id)
+            
+            if not viewer_wallet or not author_wallet:
+                return JsonResponse({'success': False, 'message': 'Chưa liên kết ví'}, status=400)
+            
+            viewer_addr, viewer_pk = viewer_wallet
+            author_addr, _ = author_wallet
+            
+            if not viewer_addr or not author_addr:
+                return JsonResponse({'success': False, 'message': 'Lỗi Ví Coin. Bạn đã liên kết ví chưa?'}, status=400)
+            
+            from accounts.crypto_utils import decrypt_key
+            private_key = decrypt_key(viewer_pk) if viewer_pk else None
+            
+            # Thực hiện chuyển token
+            from accounts.utils import user_transfer_tokens
+            success, result = user_transfer_tokens(viewer_addr, author_addr, required_tokens, private_key)
+            
+            if success:
+                # Lưu vào bảng test_payments
+                cursor.execute("""
+                    INSERT INTO test_payments (test_id, user_id) 
+                    VALUES (%s, %s)
+                """, [test_id, user_id])
+                
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Bạn đã trả {required_tokens} token thành công!',
+                    'tx_hash': result
+                })
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'message': f'Giao dịch thất bại: {result}'
+                })
+                
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)})

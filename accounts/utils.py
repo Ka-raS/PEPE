@@ -122,7 +122,7 @@ getcontext().prec = 50
 
 def hscoin_get_balance(user_address): 
     # caller = getattr(settings, 'ADMIN_WALLET_ADDRESS', user_address)
-    caller="0x693d7eeac22122406e49df7a84a23382fa272748"
+    caller=user_address
     print(f" Caller: {caller}")
     try:
         hex_input = encode_input_data("getBalance", [user_address])
