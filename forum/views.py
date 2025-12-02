@@ -75,8 +75,6 @@ def create_post(request):
     errors = []
     if not title:
         errors.append('Tiêu đề không được để trống')
-    elif len(title) < 5:
-        errors.append('Tiêu đề phải có ít nhất 5 ký tự')
     elif len(title) > 200:
         errors.append('Tiêu đề không được quá 200 ký tự')
         
