@@ -303,3 +303,346 @@ def update_avatar(request):
         messages.error(request, f'Lỗi khi tải ảnh: {str(e)}')
 
     return redirect('accounts:index')
+
+import json
+import re
+import logging
+import traceback
+from django.db import connection
+from django.http import JsonResponse
+from django.shortcuts import redirect
+from django.views.decorators.http import require_POST
+from .crypto_utils import encrypt_key, decrypt_key
+from .utils import admin_mint_tokens, user_burn_tokens, user_transfer_tokens, hscoin_get_balance
+
+logger = logging.getLogger(__name__)
+
+# --- HELPER ---
+def get_user_wallet(user_id):
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT wallet_address, encrypted_private_key FROM students WHERE id = %s", [user_id])
+        return cursor.fetchone()
+
+
+# ======================================================
+# 1. API: LIÊN KẾT VÍ THỦ CÔNG
+# ======================================================
+@require_POST
+def api_link_wallet(request):
+    try:
+        data = json.loads(request.body or b'{}')
+    except Exception:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON'}, status=400)
+
+    user_id = request.session.get('user_id')
+    if not user_id:
+        return JsonResponse({'success': False, 'message': 'Vui lòng đăng nhập'}, status=401)
+
+    address = (data.get('address') or '').strip()
+    private_key = (data.get('private_key') or data.get('privateKey') or '').strip()
+
+    if not address or not private_key:
+        return JsonResponse({'success': False, 'message': 'Thiếu thông tin ví'}, status=400)
+
+    # Chuẩn hóa
+    if not address.startswith('0x'):
+        address = '0x' + address
+    address = address.lower()
+    if private_key.lower().startswith('0x'):
+        private_key = private_key[2:]
+
+    # Validate Address
+    if not re.fullmatch(r'0x[0-9a-fA-F]{40}', address):
+        return JsonResponse({'success': False, 'message': 'Địa chỉ ví không hợp lệ'}, status=400)
+
+    try:
+        encrypted_pk = encrypt_key(private_key)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "UPDATE students SET wallet_address = %s, encrypted_private_key = %s WHERE id = %s",
+                [address, encrypted_pk, user_id]
+            )
+            if cursor.rowcount == 0:
+                cursor.execute(
+                    "INSERT INTO students (id, wallet_address, encrypted_private_key) VALUES (%s, %s, %s)",
+                    [user_id, address, encrypted_pk]
+                )
+        return JsonResponse({'success': True, 'message': f'Liên kết thành công ví {address}'})
+    except Exception as e:
+        print(address)
+        print(user_id)
+        print(encrypted_pk)
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'message': f'Lỗi Server: {str(e)}'}, status=500)
+
+
+# ======================================================
+# 2. API NẠP COIN (User Burn Token)
+# ======================================================
+@require_POST
+def api_deposit(request):
+    user_id = request.session.get('user_id')
+    if not user_id:
+        return JsonResponse({'success': False, 'message': 'Vui lòng đăng nhập'}, status=401)
+
+    try:
+        data = json.loads(request.body)
+        amount = float(data.get('amount', 0))
+        if amount <= 0:
+            return JsonResponse({'success': False, 'message': 'Số lượng > 0'})
+
+        row = get_user_wallet(user_id)
+        if not row:
+            return JsonResponse({'success': False, 'message': 'Chưa liên kết ví'})
+
+        user_address, encrypted_pk = row
+        if not user_address:
+            return JsonResponse({'success': False, 'message': 'Lỗi dữ liệu ví'})
+
+        # Giải mã private key
+        private_key = None
+        if encrypted_pk:
+            try:
+                private_key = decrypt_key(encrypted_pk)
+            except Exception:
+                return JsonResponse({'success': False, 'message': 'Lỗi giải mã private key'})
+
+        # Gọi blockchain
+        success, result = user_burn_tokens(user_address, amount, private_key)
+
+        if success:
+            with connection.cursor() as cursor:
+                cursor.execute("UPDATE users SET coins = COALESCE(coins, 0) + %s WHERE id = %s", [amount, user_id])
+            try:
+                from .utils import append_user_tx
+                append_user_tx(user_id, {
+                    'type': 'deposit',
+                    'amount': amount,
+                    'currency': 'COIN',
+                    'counterparty': None,
+                    'tx_hash': result if isinstance(result, str) else None,
+                    'note': 'Nạp từ Token (blockchain) về Coin nội bộ',
+                })
+            except Exception:
+                pass
+            try:
+                bal = hscoin_get_balance(user_address)
+            except Exception:
+                bal = 0.0
+            print(result)
+            return JsonResponse({'success': True, 'message': f'Nạp thành công! Hash: {result}', 'balance': bal})
+            
+        else:
+            return JsonResponse({'success': False, 'message': f'Lỗi Blockchain: {result}'})
+
+    except Exception as e:
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'message': f'Lỗi Server: {str(e)}'})
+
+
+# ======================================================
+# 3. API RÚT COIN (Admin Mint)
+# ======================================================
+@require_POST
+def api_withdraw(request):
+    user_id = request.session.get('user_id')
+    if not user_id:
+        return JsonResponse({'success': False, 'message': 'Vui lòng đăng nhập'}, status=401)
+
+    try:
+        data = json.loads(request.body)
+        amount = float(data.get('amount', 0))
+        if amount <= 0:
+            return JsonResponse({'success': False, 'message': 'Số lượng > 0'})
+
+        wallet_row = get_user_wallet(user_id)
+        if not wallet_row:
+            return JsonResponse({'success': False, 'message': 'Chưa liên kết ví'})
+        user_address = wallet_row[0]
+
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT coins FROM users WHERE id = %s", [user_id])
+            row = cursor.fetchone()
+            current_coins = row[0] if row else 0
+            if current_coins < amount:
+                return JsonResponse({'success': False, 'message': 'Không đủ Coin'})
+
+            cursor.execute("UPDATE users SET coins = coins - %s WHERE id = %s", [amount, user_id])
+
+        # Admin Mint
+        print("Withdrawing", amount, "for user", user_id, "to address", user_address)
+        success, result = admin_mint_tokens(user_address, amount)
+
+        if success:
+            try:
+                from .utils import append_user_tx
+                append_user_tx(user_id, {
+                    'type': 'withdraw',
+                    'amount': amount,
+                    'currency': 'COIN',
+                    'counterparty': None,
+                    'tx_hash': result if isinstance(result, str) else None,
+                    'note': 'Rút Coin -> Token (admin mint)',
+                })
+            except Exception:
+                pass
+            try:
+                bal = hscoin_get_balance(user_address)
+                print("Balance after withdraw:", bal)
+            except Exception:
+                bal = 0.0
+            print(result)
+            return JsonResponse({'success': True, 'message': f'Rút thành công! Hash: {result}', 'balance': bal})
+        else:
+            # Hoàn tiền
+            with connection.cursor() as cursor:
+                cursor.execute("UPDATE users SET coins = coins + %s WHERE id = %s", [amount, user_id])
+            return JsonResponse({'success': False, 'message': f'Lỗi Blockchain: {result}'})
+
+    except Exception as e:
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'message': f'Lỗi Server: {str(e)}'})
+
+
+# ======================================================
+# 4. CHUYỂN TIỀN P2P (User Transfer)
+# ======================================================
+@require_POST
+def api_transfer_p2p(request):
+    user_id = request.session.get('user_id')
+    if not user_id:
+        return JsonResponse({'success': False, 'message': 'Login required'}, status=401)
+
+    try:
+        data = json.loads(request.body)
+        receiver = data.get('receiver_address')
+        amount = float(data.get('amount', 0))
+        if amount <= 0:
+            return JsonResponse({'success': False, 'message': 'Số lượng > 0'})
+
+        row = get_user_wallet(user_id)
+        if not row:
+            return JsonResponse({'success': False, 'message': 'Chưa liên kết ví'})
+        sender_addr, encrypted_pk = row
+        if not sender_addr:
+            return JsonResponse({'success': False, 'message': 'Lỗi dữ liệu ví'})
+
+        private_key = None
+        if encrypted_pk:
+            try:
+                private_key = decrypt_key(encrypted_pk)
+            except Exception:
+                return JsonResponse({'success': False, 'message': 'Lỗi giải mã private key'})
+
+        success, result = user_transfer_tokens(sender_addr, receiver, amount, private_key)
+
+        if success:
+            try:
+                from .utils import append_user_tx
+                append_user_tx(user_id, {
+                    'type': 'transfer',
+                    'amount': amount,
+                    'currency': 'STK',
+                    'counterparty': receiver,
+                    'tx_hash': result if isinstance(result, str) else None,
+                    'note': 'Chuyển token tới địa chỉ khác',
+                })
+            except Exception:
+                pass
+            try:
+                bal = hscoin_get_balance(sender_addr)
+            except Exception:
+                bal = 0.0
+            print(result)
+            return JsonResponse({'success': True, 'message': f'Chuyển thành công: {result}', 'balance': bal})
+        else:
+            return JsonResponse({'success': False, 'message': result})
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)})
+
+
+# ======================================================
+# 5. MUA NỘI DUNG
+# ======================================================
+@require_POST
+def api_buy_content(request):
+    buyer_id = request.session.get('user_id')
+    if not buyer_id:
+        return JsonResponse({'success': False, 'message': 'Login required'}, status=401)
+
+    try:
+        data = json.loads(request.body)
+        item_id = data.get('id')
+        item_type = data.get('type')
+
+        buyer_row = get_user_wallet(buyer_id)
+        if not buyer_row:
+            return JsonResponse({'success': False, 'message': 'Chưa liên kết ví'})
+        buyer_addr, encrypted_pk = buyer_row
+
+        with connection.cursor() as cursor:
+            if item_type == 'test':
+                cursor.execute(
+                    "SELECT 0, s.wallet_address, t.author_id "
+                    "FROM tests t JOIN students s ON t.author_id = s.id WHERE t.id = %s",
+                    [item_id]
+                )
+            else:
+                return JsonResponse({'success': False, 'message': 'Loại item không hỗ trợ'})
+
+            row = cursor.fetchone()
+            if not row:
+                return JsonResponse({'success': False, 'message': 'Không tìm thấy'})
+            price, creator_addr, owner_id = row
+            price = 10  # Fake price
+
+            if buyer_id == owner_id:
+                return JsonResponse({'success': False, 'message': 'Không thể tự mua'})
+
+            # Giải mã private key để gọi transfer
+            private_key = None
+            if encrypted_pk:
+                try:
+                    private_key = decrypt_key(encrypted_pk)
+                except Exception:
+                    return JsonResponse({'success': False, 'message': 'Lỗi giải mã private key'})
+
+            success, result = user_transfer_tokens(buyer_addr, creator_addr, price, private_key)
+
+            if success:
+                return JsonResponse({'success': True, 'message': 'Mua thành công'})
+            return JsonResponse({'success': False, 'message': f'Lỗi: {result}'})
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)})
+
+
+# ======================================================
+# API LẤY SỐ DƯ
+# ======================================================
+def api_get_balance(request):
+    user_id = request.session.get('user_id')
+    if not user_id:
+        return JsonResponse({'success': False, 'balance': 0})
+    row = get_user_wallet(user_id)
+    if row and row[0]:
+        bal = hscoin_get_balance(row[0])
+        return JsonResponse({'success': True, 'balance': bal})
+    return JsonResponse({'success': False, 'balance': 0})
+
+
+# ======================================================
+# HỦY LIÊN KẾT VÍ
+# ======================================================
+@require_POST
+def unlink_wallet(request):
+    user_id = request.session.get('user_id')
+    if not user_id:
+        return redirect('accounts:login')
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "UPDATE students SET wallet_address = NULL, encrypted_private_key = NULL WHERE id = %s",
+            [user_id]
+        )
+    return redirect('wallet:index')

@@ -151,5 +151,13 @@ class Migration(migrations.Migration):
                 FOREIGN KEY (voter_id) REFERENCES users(id) ON DELETE CASCADE, -- Nếu user bị xóa thì các vote của user đó cũng bị xóa
                 FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE -- Nếu post bị xóa thì các vote của post đó cũng bị xóa
             );
+                          
+            CREATE TABLE post_buy (
+                post_id INTEGER NOT NULL,
+                buyer_id INTEGER NOT NULL,
+                PRIMARY KEY (post_id, buyer_id),
+                FOREIGN KEY(post_id) REFERENCES posts(id) ON DELETE CASCADE,
+                FOREIGN KEY(buyer_id) REFERENCES users(id) ON DELETE CASCADE
+            );
         """),
     ]

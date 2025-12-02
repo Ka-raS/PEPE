@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     "forum",
     "home",
     "search",
+    "wallet",
 
     "django.contrib.messages",
     "django.contrib.staticfiles"

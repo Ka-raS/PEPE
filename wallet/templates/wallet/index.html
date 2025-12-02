@@ -1,0 +1,284 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Ví HSCoin{% endblock %}
+
+{% block main %}
+<div class="container my-4">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm h-100 border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="bi bi-link-45deg me-2"></i>Ví Blockchain (HSCoin)</h5>
+                </div>
+                <div class="card-body">
+                    
+                    {% if not has_wallet %}
+                    <div id="wallet-connect-section" class="text-center py-4">
+                        <i class="bi bi-shield-lock display-1 text-muted mb-3"></i>
+                        <p>Liên kết địa chỉ ví và Private Key để thực hiện giao dịch.</p>
+                        <button class="btn btn-dark btn-lg rounded-btn" data-bs-toggle="modal" data-bs-target="#linkWalletModal">
+                            <i class="bi bi-key me-2"></i>Liên kết Ví
+                        </button>
+                    </div>
+                    {% else %}
+                    <div id="wallet-info-section">
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-bold">ĐỊA CHỈ VÍ CỦA BẠN</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control font-monospace" value="{{ wallet_address }}" readonly>
+                                <button class="btn btn-outline-secondary" onclick="copyAddress('{{ wallet_address }}')">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="row text-center mb-3">
+                            <div class="col-12">
+                                <small class="text-muted">TOKEN TRÊN BLOCKCHAIN (HSCoin)</small>
+                                <h4 class="fw-bold text-warning" id="token-balance">Đang tải...</h4>
+                            </div>
+                        </div>
+                        <div class="alert alert-success small mb-0 rounded-card">
+                            <i class="bi bi-check-circle me-1"></i>Đã liên kết ví thành công.
+                        </div>
+                        
+                        <form method="POST" action="{% url 'accounts:unlink_wallet' %}" class="mt-3" onsubmit="return confirm('Bạn có chắc muốn hủy liên kết?');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-danger w-100 rounded-btn">
+                                <i class="bi bi-x-circle me-1"></i>Hủy liên kết ví
+                            </button>
+                        </form>
+                    </div>
+                    
+                    <!-- PROMINENT TRANSFER BLOCK -->
+                    <div class="card mt-3 p-3 shadow-sm">
+                        <h6 class="mb-2">Chuyển Token tới ví khác</h6>
+                        <div class="row g-2 align-items-center">
+                            <div class="col-12 mb-2">
+                                <input id="transfer-address" type="text" class="form-control font-monospace" placeholder="Địa chỉ nhận 0x...">
+                            </div>
+                            <div class="col-8">
+                                <input id="transfer-amount" type="number" class="form-control" placeholder="Số lượng Token">
+                            </div>
+                            <div class="col-4 d-grid">
+                                <button id="transferBtn" class="btn btn-primary" onclick="apiTransfer()" {% if not has_wallet %}disabled{% endif %}>
+                                    <i class="bi bi-send me-1"></i>Gửi Token
+                                </button>
+                            </div>
+                        </div>
+                        <div class="mt-2 small text-muted">Lưu ý: kiểm tra kỹ địa chỉ trước khi gửi. Giao dịch sẽ dùng private key đã liên kết.</div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Transaction history -->
+                    <div class="card mt-3">
+                        <div class="card-header bg-light small fw-bold">Lịch sử giao dịch</div>
+                        <div class="card-body">
+                            {% if transactions and transactions|length > 0 %}
+                                <ul class="list-group list-group-flush">
+                                {% for tx in transactions|slice:":10" %}
+                                    <li class="list-group-item small">
+                                        <div class="d-flex justify-content-between">
+                                            <div>
+                                                <strong>{{ tx.type|capfirst }}</strong> — {{ tx.note }}
+                                                <div class="text-muted small">{{ tx.currency }} • {{ tx.amount }}</div>
+                                                {% if tx.counterparty %}
+                                                    <div class="text-muted small">Đến: <span class="font-monospace">{{ tx.counterparty }}</span></div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="text-end small text-muted">{{ tx.ts }}</div>
+                                        </div>
+                                    </li>
+                                {% endfor %}
+                                </ul>
+                                {% if transactions|length > 10 %}
+                                    <div class="mt-2 small text-muted">Hiển thị 10 giao dịch gần nhất.</div>
+                                {% endif %}
+                            {% else %}
+                                <div class="small text-muted">Chưa có giao dịch nào.</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal liên kết ví -->
+<div class="modal fade" id="linkWalletModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content rounded-card">
+            <div class="modal-header bg-custom-dark text-white rounded-card-header">
+                <h5 class="modal-title">Liên kết Ví HSCoin</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="manual-address" class="form-label fw-bold">Địa chỉ ví (Wallet Address)</label>
+                    <input type="text" class="form-control rounded-input" id="manual-address" placeholder="0x..." required>
+                    <div class="form-text">Địa chỉ ví bắt đầu bằng 0x</div>
+                </div>
+                <div class="mb-3">
+                    <label for="manual-pk" class="form-label fw-bold">Private Key</label>
+                    <div class="input-group">
+                        <input type="password" class="form-control rounded-input" id="manual-pk" placeholder="Nhập Private Key của bạn" required>
+                        <button class="btn btn-outline-secondary" type="button" onclick="togglePkVisibility()">
+                            <i class="bi bi-eye" id="toggle-pk-icon"></i>
+                        </button>
+                    </div>
+                    <div class="form-text text-danger">
+                        <i class="bi bi-exclamation-triangle"></i> Private Key sẽ được mã hóa khi lưu trữ.
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary rounded-btn" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-primary rounded-btn" onclick="submitManualLink()">
+                    <i class="bi bi-link-45deg me-1"></i>Xác nhận Liên kết
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+    const csrftoken = '{{ csrf_token }}';
+
+    // Liên kết ví thủ công
+    async function submitManualLink() {
+        const addressInput = document.getElementById('manual-address');
+        const pkInput = document.getElementById('manual-pk');
+        
+        const address = addressInput.value.trim();
+        const privateKey = pkInput.value.trim();
+
+        if (!address || !privateKey) {
+            alert("Vui lòng nhập đầy đủ Địa chỉ ví và Private Key!");
+            return;
+        }
+
+        const btn = document.querySelector('#linkWalletModal .btn-primary');
+        const oldText = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Đang xử lý...';
+        btn.disabled = true;
+
+        try {
+            const res = await fetch("{% url 'accounts:api_link_wallet' %}", { 
+                method: "POST",
+                headers: { 
+                    "Content-Type": "application/json", 
+                    "X-CSRFToken": csrftoken
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({ 
+                    address: address,
+                    private_key: privateKey 
+                })
+            });
+
+            const data = await res.json();
+
+            if (data.success) {
+                alert("✅ " + data.message);
+                location.reload();
+            } else {
+                alert("❌ Lỗi: " + data.message);
+            }
+
+        } catch (e) { 
+            console.error(e);
+            alert("Lỗi kết nối: " + e.message); 
+        } finally {
+            btn.innerHTML = oldText;
+            btn.disabled = false;
+        }
+    }
+
+    function togglePkVisibility() {
+        const pkInput = document.getElementById('manual-pk');
+        const icon = document.getElementById('toggle-pk-icon');
+        if (pkInput.type === "password") {
+            pkInput.type = "text";
+            icon.classList.remove('bi-eye');
+            icon.classList.add('bi-eye-slash');
+        } else {
+            pkInput.type = "password";
+            icon.classList.remove('bi-eye-slash');
+            icon.classList.add('bi-eye');
+        }
+    }
+
+    // Gửi token tới ví khác
+    async function apiTransfer() {
+        const addr = document.getElementById('transfer-address').value.trim();
+        const amount = document.getElementById('transfer-amount').value;
+        if (!addr) return alert('Vui lòng nhập địa chỉ nhận');
+        if (!amount || amount <= 0) return alert('Số lượng không hợp lệ');
+
+        const btn = document.getElementById('transferBtn');
+        const oldText = btn ? btn.innerHTML : null;
+        if (btn) { btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Đang gửi...'; btn.disabled = true; }
+
+        try {
+            const res = await fetch("{% url 'accounts:api_transfer_p2p' %}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+                credentials: 'same-origin',
+                body: JSON.stringify({ receiver_address: addr, amount: amount })
+            });
+
+            const data = await res.json();
+            if (data.success) {
+                alert('✅ ' + data.message);
+                location.reload();
+            } else {
+                alert('❌ Thất bại: ' + data.message);
+            }
+        } catch (e) { console.error(e); alert('Lỗi kết nối: ' + e.message); }
+        finally { if (btn) { btn.innerHTML = oldText; btn.disabled = false; } }
+    }
+
+    // Load số dư token
+    async function loadTokenBalance() {
+        const balanceElem = document.getElementById('token-balance');
+        if (!balanceElem) return;
+
+        try {
+            const res = await fetch("{% url 'accounts:api_get_balance' %}", { credentials: 'same-origin' }); 
+            const data = await res.json();
+            
+            if (data.success) {
+                const balance = parseFloat(data.balance);
+                balanceElem.innerText = balance.toLocaleString('en-US', {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 4
+                }) + " HSCoin";
+            } else {
+                balanceElem.innerText = "0 HSCoin";
+            }
+        } catch (e) {
+            balanceElem.innerText = "Error";
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        loadTokenBalance();
+    });
+
+    function copyAddress(text) {
+        navigator.clipboard.writeText(text);
+        alert("Đã copy địa chỉ ví: " + text);
+    }
+</script>
+{% endblock %}

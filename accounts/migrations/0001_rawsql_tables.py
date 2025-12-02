@@ -45,7 +45,8 @@ class Migration(migrations.Migration):
                 password TEXT NOT NULL,
                 email TEXT UNIQUE NOT NULL,
                 user_type TEXT NOT NULL CHECK(user_type IN ('student', 'teacher')),
-                
+                last_checkin DATE,
+                          
                 first_name TEXT,
                 last_name TEXT,
                 avatar_path TEXT
@@ -53,10 +54,12 @@ class Migration(migrations.Migration):
             
             -- Thực thể yếu
             CREATE TABLE students (
+                id INTEGER PRIMARY KEY,
                 student_code TEXT UNIQUE,
                 enrollment_year INTEGER,
+                encrypted_private_key TEXT,
+                wallet_address TEXT,
                           
-                id INTEGER PRIMARY KEY,
                 major_id INTEGER,
                 FOREIGN KEY (id) REFERENCES users(id) ON DELETE CASCADE, -- Nếu xóa user thì student cũng bị xóa
                 FOREIGN KEY (major_id) REFERENCES majors(id)
@@ -64,16 +67,33 @@ class Migration(migrations.Migration):
                      
             -- Thực thể yếu
             CREATE TABLE teachers (
+                id INTEGER PRIMARY KEY,
                 teacher_code TEXT UNIQUE,
                 title TEXT,
                 degree TEXT,
                           
-                id INTEGER PRIMARY KEY,
                 department_id INTEGER,
                 FOREIGN KEY (id) REFERENCES users(id) ON DELETE CASCADE, -- Nếu xóa user thì teacher cũng bị xóa
                 FOREIGN KEY (department_id) REFERENCES departments(id)
             );
 
+            CREATE TABLE referrals (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                rewarded_referrer INTEGER NOT NULL DEFAULT 0,
+                rewarded_referred INTEGER NOT NULL DEFAULT 0,
+                created_at DATETIME NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+                referred_id INTEGER NOT NULL,
+                referrer_id INTEGER NOT NULL,
+                FOREIGN KEY(referred_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY(referrer_id) REFERENCES users(id) ON DELETE CASCADE
+            );
+
+            CREATE TABLE unlinked_wallets (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                address TEXT NOT NULL,
+                unlinked_at DATETIME DEFAULT (datetime('now'))
+            ); 
 
             INSERT INTO departments (name)
             VALUES

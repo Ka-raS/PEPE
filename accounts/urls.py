@@ -11,9 +11,11 @@ urlpatterns = [
     path('logout/', views.logout_view, name='logout'),
     path('update-avatar/', views.update_avatar, name='update_avatar'),
 
-    # path('teacher/', views.index_teacher, name='index_teacher'),
-    # path('referral/',views.referral, name='referral'),
-    # path('wallet/',views.wallet, name='wallet'),
-    # path('checkin/', views.checkin_view, name='checkin'),
-    # path('profile/update-avatar/', views.update_avatar_view, name='update_avatar'),
+    path('api/link-wallet/', views.api_link_wallet, name='api_link_wallet'),
+    path('api/unlink-wallet/', views.unlink_wallet, name='unlink_wallet'),
+    path('api/get-balance/', views.api_get_balance, name='api_get_balance'),
+    path('api/deposit/', views.api_deposit, name='api_deposit'),
+    path('api/withdraw/', views.api_withdraw, name='api_withdraw'),
+    path('api/transfer/', views.api_transfer_p2p, name='api_transfer_p2p'),
+    path('api/buy-content/', views.api_buy_content, name='api_buy_content'),
 ]
