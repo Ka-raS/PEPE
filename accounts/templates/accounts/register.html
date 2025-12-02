@@ -124,6 +124,13 @@
                         <small class="form-text text-danger" id="roleError"></small>
                     </div>
 
+                    <div class="mb-3">
+                        <label for="referral_code" class="form-label fw-semibold">Mã giới thiệu (Nếu có)</label>
+                        <input type="text" class="form-control" id="referral_code" name="referral_code"
+                            value="{{ request.GET.ref }}" 
+                            placeholder="Nhập username">
+                    </div>
+
                     <button type="submit" class="btn btn-success bg-gradient w-100 py-3 fw-semibold mt-3 rounded-3"
                         id="submitBtn">
                         Đăng ký tài khoản

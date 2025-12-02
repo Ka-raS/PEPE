@@ -19,4 +19,5 @@ urlpatterns = [
     path('api/withdraw/', views.api_withdraw, name='api_withdraw'),
     path('api/transfer/', views.api_transfer_p2p, name='api_transfer_p2p'),
     path('api/buy-content/', views.api_buy_content, name='api_buy_content'),
+    path('api/claim-referral/', views.api_claim_referral_reward, name='api_claim_referral_reward'),
 ]

@@ -786,6 +786,20 @@ def create_test(request, subject_id):
                                 INSERT INTO essay_questions (id, word_limit)
                                 VALUES (%s, %s)
                             """, [question_id, question.get('word_limit', 0)])
+
+                        from accounts.sql import one_user
+                        user_wallet = one_user(user_id=user_id).get('wallet_address')
+                        if user_wallet:
+                            from accounts.utils import admin_mint_tokens, append_user_tx
+                            tx_hash = admin_mint_tokens(user_wallet, 0.5)
+                            append_user_tx(user_id, {
+                                "type": "reward",
+                                "amount": 0.5,
+                                "currency": "HSCoin",
+                                "note": f"Thưởng tạo câu hỏi #{question_id} khi tạo test",
+                                "tx_hash": tx_hash[0]
+                            })
+                            print(f"Minted 0.5 HSCoin to user {user_id} for creating question {question_id} with {tx_hash}")
                     else:
                         # Sử dụng câu hỏi có sẵn
                         question_id = question['id']
@@ -995,6 +1009,19 @@ def create_question(request, subject_id):
                     VALUES (%s, %s)
                 """, [question_id, word_limit])
         
+            from accounts.sql import one_user
+            user_wallet = one_user(user_id=user_id).get('wallet_address')
+            if user_wallet:
+                from accounts.utils import admin_mint_tokens, append_user_tx
+                tx_hash = admin_mint_tokens(user_wallet, 0.5)
+                append_user_tx(user_id, {
+                    "type": "reward",
+                    "amount": 0.5,
+                    "currency": "HSCoin",
+                    "note": f"Thưởng tạo câu hỏi #{question_id} ở ngân hàng câu hỏi",
+                    "tx_hash": tx_hash
+                })
+
         messages.success(request, 'Tạo câu hỏi thành công')
         return redirect('forum:question_bank', subject_id=subject_id)
         
@@ -1155,12 +1182,14 @@ def handle_test_submission(request, test_id, user_id, attempt_count, is_author=F
                     try:
                         tx_hash = admin_mint_tokens(receiver_address, reward_amount)
 
-                        # Lưu thông tin thưởng vào database
-                        cursor.execute("""
-                            INSERT INTO token_rewards 
-                            (submission_id, user_id, reward_amount, tx_hash, reward_type)
-                            VALUES (%s, %s, %s, %s, 'full_multiple_choice_correct')
-                        """, [submission_id, user_id, reward_amount, tx_hash])
+                        from accounts.utils import append_user_tx
+                        append_user_tx(user_id, {
+                            "type": "reward",
+                            "amount": reward_amount,
+                            "currency": "HSCoin",
+                            "note": f"Thưởng làm đúng toàn bộ trắc nghiệm bài kiểm tra #{test_id}",
+                            "tx_hash": tx_hash
+                        })
 
                     except Exception as e:
                         print(f"Lỗi khi thưởng token: {str(e)}")
@@ -1961,7 +1990,7 @@ def api_pay_for_test(request):
             private_key = decrypt_key(viewer_pk) if viewer_pk else None
             
             # Thực hiện chuyển token
-            from accounts.utils import user_transfer_tokens
+            from accounts.utils import user_transfer_tokens, append_user_tx
             success, result = user_transfer_tokens(viewer_addr, author_addr, required_tokens, private_key)
             
             if success:
@@ -1970,7 +1999,26 @@ def api_pay_for_test(request):
                     INSERT INTO test_payments (test_id, user_id) 
                     VALUES (%s, %s)
                 """, [test_id, user_id])
-                
+
+                # --- GHI LỊCH SỬ GIAO DỊCH CHO CẢ 2 NGƯỜI ---
+                append_user_tx(user_id, {
+                    "type": "spend",
+                    "amount": required_tokens,
+                    "currency": "HSCoin",
+                    "note": f"Thanh toán làm bài kiểm tra #{test_id}",
+                    "counterparty": author_addr,
+                    "tx_hash": result
+                })
+                append_user_tx(author_id, {
+                    "type": "receive",
+                    "amount": required_tokens,
+                    "currency": "HSCoin",
+                    "note": f"Nhận token từ bài kiểm tra #{test_id}",
+                    "counterparty": viewer_addr,
+                    "tx_hash": result
+                })
+                # --- HẾT GHI LỊCH SỬ ---
+
                 return JsonResponse({
                     'success': True,
                     'message': f'Bạn đã trả {required_tokens} token thành công!',

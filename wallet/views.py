@@ -53,7 +53,7 @@ def wallet(request):
 
 
 def referral(request):
-    """Trang giới thiệu - dùng session, không dùng ORM"""
+    """Trang giới thiệu bạn bè"""
     if not request.session.get('user_id'):
         messages.error(request, 'Vui lòng đăng nhập')
         return redirect('accounts:login')
@@ -61,46 +61,53 @@ def referral(request):
     username = request.session.get('username', '')
     user_id = request.session.get('user_id')
     
-    # Tạo link giới thiệu
+    # 1. Tạo Referral Link: DÙNG USERNAME (Sửa đoạn này)
     referral_link = "#"
     try:
         scheme = request.scheme
         domain = request.get_host()
         register_url = reverse('accounts:register')
+        # Dùng username làm ref code
         referral_link = f"{scheme}://{domain}{register_url}?ref={username}"
     except Exception as e:
         print(f"Lỗi tạo link giới thiệu: {e}")
     
-    # Lấy dữ liệu giới thiệu từ DB (raw SQL)
+    # 2. Thống kê và danh sách từ DB
     referrals_made_count = 0
     coins_earned = 0
     recent_referrals_list = []
+    
     try:
         with connection.cursor() as cursor:
+            # Lấy danh sách kèm trạng thái nhận thưởng
             cursor.execute("""
-                SELECT u.username, r.created_at
+                SELECT u.username, r.created_at, r.id, r.rewarded_referrer
                 FROM referrals r
                 JOIN users u ON r.referred_id = u.id
-                WHERE r.referrer_id = %s AND r.rewarded_referrer = 1
+                WHERE r.referrer_id = %s
                 ORDER BY r.created_at DESC
-                LIMIT 10
             """, [user_id])
+            
             rows = cursor.fetchall()
             recent_referrals_list = [
-                {'username': row[0], 'date_joined': row[1]}
+                {
+                    'username': row[0], 
+                    'date_joined': row[1],
+                    'referral_id': row[2],
+                    'is_rewarded': row[3] == 1
+                }
                 for row in rows
             ]
-            # Đếm tổng số lượt giới thiệu thành công
-            cursor.execute("""
-                SELECT COUNT(*) FROM referrals
-                WHERE referrer_id = %s AND rewarded_referrer = 1
-            """, [user_id])
+            
+            cursor.execute("SELECT COUNT(*) FROM referrals WHERE referrer_id = %s", [user_id])
             referrals_made_count = cursor.fetchone()[0]
-            coins_earned = referrals_made_count * 50
-    except Exception:
-        referrals_made_count = 0
-        coins_earned = 0
-        recent_referrals_list = []
+            
+            cursor.execute("SELECT COUNT(*) FROM referrals WHERE referrer_id = %s AND rewarded_referrer = 1", [user_id])
+            rewarded_count = cursor.fetchone()[0]
+            coins_earned = rewarded_count * 50
+
+    except Exception as e:
+        print(f"Lỗi thống kê referral: {e}")
     
     context = {
         'username': username,

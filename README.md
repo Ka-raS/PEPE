@@ -8,6 +8,14 @@
 | ![Create Test](/media/screenshots/forum_test_form.png)        | ![Question Bank](/media/screenshots/forum_question_bank.png) |
 | ![Grade Test]( /media/screenshots/forum_grade_submission.png) | ![Submission](   /media/screenshots/forum_submission.png)    |
 
+## Contributors
+
+- [karas](https://github.com/Ka-raS)
+- [Phạm Quốc Hùng](https://github.com/phamquocdow)
+- [Juky](https://github.com/Namtran205)
+- [An Phạm](https://github.com/AnPham1820)
+- [hastur-78](https://github.com/hastur-78)
+
 ## Main Features
 
 - User login and registration for students and teachers.
@@ -50,11 +58,3 @@
     ```bash
     $ python manage.py runserver
     ```
-
-## Users in `example.sqlite3`
-
-| Username        | Password  |
-|-----------------|-----------|
-| student         | 000000    |
-| anotherstudent  | 000000    |
-| teacher         | 000000    |

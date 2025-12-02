@@ -189,6 +189,7 @@ def register_view(request):
     last_name          = request.POST.get('last_name') or None
     user_type          = request.POST.get('user_type')
     
+    referral_code      = request.POST.get('referral_code', '').strip()
     # Validation
     if password != password_confirm:
         messages.error(request, 'Mật khẩu không khớp')
@@ -206,12 +207,28 @@ def register_view(request):
             messages.error(request, 'Tên đăng nhập hoặc email đã tồn tại')
             return render(request, 'accounts/register.html')
         
-        # Tạo profile mới, bọc thêm để bắt lỗi unique từ DB
-        try:
-            user_id = sql.insert_user(username, email, hashed_password, first_name, last_name, user_type)
-        except e:
-            messages.error(request, 'Tên đăng nhập hoặc email đã tồn tại')
-            return render(request, 'accounts/register.html')
+        # Tạo user mới
+        user_id = sql.insert_user(username, email, hashed_password, first_name, last_name, user_type)
+
+        # ---------------------------------------------------------
+        # XỬ LÝ GIỚI THIỆU (Logic đúng nằm ở đây)
+        # ---------------------------------------------------------
+        if referral_code:
+            referrer_id = None
+            with connection.cursor() as cursor:
+                # 1. Tìm người giới thiệu bằng username
+                cursor.execute("SELECT id FROM users WHERE username = %s", [referral_code])
+                row = cursor.fetchone()
+                if row:
+                    referrer_id = row[0]
+
+                # 2. Nếu tìm thấy và không phải tự giới thiệu chính mình
+                if referrer_id and referrer_id != user_id:
+                    # Ghi vào bảng referrals (rewarded mặc định là 0)
+                    cursor.execute("""
+                        INSERT INTO referrals (referrer_id, referred_id)
+                        VALUES (%s, %s)
+                    """, [referrer_id, user_id])
 
         messages.success(request, 'Đăng ký thành công! Vui lòng đăng nhập.')
         return redirect('accounts:login')
@@ -313,7 +330,7 @@ from django.http import JsonResponse
 from django.shortcuts import redirect
 from django.views.decorators.http import require_POST
 from .crypto_utils import encrypt_key, decrypt_key
-from .utils import admin_mint_tokens, user_burn_tokens, user_transfer_tokens, hscoin_get_balance
+from .utils import admin_mint_tokens, user_burn_tokens, user_transfer_tokens, hscoin_get_balance, append_user_tx
 
 logger = logging.getLogger(__name__)
 
@@ -519,6 +536,79 @@ def api_deposit(request):
         traceback.print_exc()
         return JsonResponse({'success': False, 'message': f'Lỗi Server: {str(e)}'})
 
+@require_POST
+def api_claim_referral_reward(request):
+    """API Nhận thưởng cho Người giới thiệu"""
+    user_id = request.session.get('user_id')
+    if not user_id:
+        return JsonResponse({'success': False, 'message': 'Vui lòng đăng nhập'}, status=401)
+
+    try:
+        data = json.loads(request.body)
+        referral_id = data.get('referral_id')
+
+        if not referral_id:
+            return JsonResponse({'success': False, 'message': 'Thiếu thông tin giới thiệu'}, status=400)
+
+        # 1. Kiểm tra: Phải là người giới thiệu và chưa nhận thưởng
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT id, referred_id 
+                FROM referrals 
+                WHERE id = %s AND referrer_id = %s AND rewarded_referrer = 0
+            """, [referral_id, user_id])
+            
+            row = cursor.fetchone()
+            if not row:
+                return JsonResponse({'success': False, 'message': 'Không hợp lệ hoặc đã nhận thưởng'}, status=404)
+
+        # 2. Lấy ví của người giới thiệu
+        wallet_row = get_user_wallet(user_id)
+        if not wallet_row or not wallet_row[0]:
+            return JsonResponse({'success': False, 'message': 'Bạn chưa liên kết ví'}, status=400)
+
+        user_address = wallet_row[0]
+        amount = 50 # 50 Token thưởng
+
+        # 3. Blockchain Mint
+        success, result = admin_mint_tokens(user_address, amount)
+        
+        if not success:
+            return JsonResponse({'success': False, 'message': f'Lỗi Blockchain: {result}'}, status=500)
+
+        # 4. Cập nhật DB
+        with connection.cursor() as cursor:
+            cursor.execute("UPDATE referrals SET rewarded_referrer = 1 WHERE id = %s", [referral_id])
+
+        # 5. Ghi log
+        try:
+            append_user_tx(user_id, {
+                'type': 'referral_bonus',
+                'amount': amount,
+                'currency': 'STK',
+                'counterparty': None,
+                'tx_hash': result if isinstance(result, str) else None,
+                'note': f'Thưởng giới thiệu (Ref ID: {referral_id})',
+            })
+        except Exception:
+            pass
+
+        # 6. Lấy số dư mới
+        try:
+            bal = hscoin_get_balance(user_address)
+        except Exception:
+            bal = 0.0
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Đã nhận {amount} Token thành công!',
+            'balance': bal,
+            'tx': result
+        })
+
+    except Exception as e:
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'message': f'Lỗi Server: {str(e)}'}, status=500)
 
 # ======================================================
 # 3. API RÚT COIN (Admin Mint)

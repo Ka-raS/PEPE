@@ -93,6 +93,14 @@ HƯỚNG DẪN SỬ DỤNG WEBSITE PEPE:
    - Thanh tìm kiếm ở trên cùng dùng để tìm nhanh Bài viết, Đề thi hoặc Người dùng khác.
 """
 
+try:
+    genai.configure(api_key=settings.GEMINI_API_KEY)
+    model = genai.GenerativeModel('gemini-2.5-flash')
+except Exception as e:
+    print(f"Lỗi cấu hình Gemini AI: {e}")
+    model = None
+
+
 @csrf_exempt
 def chatbot_api(request):
     if request.method == 'POST':

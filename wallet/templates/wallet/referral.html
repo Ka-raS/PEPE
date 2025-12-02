@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-
+{% load static %}
 {% block title %}Giới thiệu bạn bè{% endblock %}
 
 {% block style %}
@@ -13,8 +13,8 @@
     <div class="col-lg-8">
         <div class="card shadow-sm">
             <div class="card-body p-4">
-                <h2 class="h3 mb-3 border-bottom pb-3">Mời bạn bè, nhận thưởng Coin!</h2>
-                <p class="text-muted">Chia sẻ liên kết giới thiệu của bạn. Khi bạn bè của bạn đăng ký, cả hai sẽ nhận được phần thưởng là <strong class="text-primary">50 coin</strong>!</p>
+                <h2 class="h3 mb-3 border-bottom pb-3">Mời bạn bè, nhận thưởng Token!</h2>
+                <p class="text-muted">Chia sẻ liên kết giới thiệu của bạn. Khi bạn bè của bạn đăng ký, cả hai sẽ nhận được phần thưởng là <strong class="text-primary">50 Token</strong>!</p>
 
                 <div class="mb-4">
                     <label for="referralLink" class="form-label fw-bold">Liên kết giới thiệu của bạn:</label>
@@ -51,7 +51,7 @@
                         <div class="p-3 bg-light rounded h-100">
                             <div class="fs-1 text-warning"><i class="bi bi-gift-fill"></i></div>
                             <h6 class="mt-2">3. Nhận thưởng</h6>
-                            <p class="small text-muted mb-0">Cả hai bạn đều nhận được 50 coin vào ví.</p>
+                            <p class="small text-muted mb-0">Cả hai bạn đều nhận được 50 Token vào ví.</p>
                         </div>
                     </div>
                 </div>
@@ -80,7 +80,7 @@
                             </div>
                             <div class="col-6">
                                 <div class="h3 fw-bold text-success"><i class="bi bi-coin"></i> {{ coins_earned_from_referrals|default:"0" }}</div>
-                                <div class="small text-muted">Coin đã nhận</div>
+                                <div class="small text-muted">Token đã nhận</div>
                             </div>
                         </div>
                     </div>
@@ -89,10 +89,27 @@
                 <div class="card shadow-sm">
                     <div class="card-header"><h6 class="mb-0"><i class="bi bi-list-stars me-2"></i>Lịch sử giới thiệu thành công</h6></div>
                     <ul class="list-group list-group-flush">
-                        {% for referred_user in recent_referrals_list %}
+                        {% for ref in recent_referrals_list %}
                         <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <span>{{ referred_user.username }}</span>
-                            <small class="text-muted">{{ referred_user.date_joined|timesince }} trước</small>
+                            <div>
+                                <span class="fw-bold">{{ ref.username }}</span>
+                                <small class="text-muted d-block" style="font-size: 0.8em;">
+                                    {{ ref.date_joined|date:"d/m/Y H:i" }}
+                                </small>
+                            </div>
+                            
+                            <div>
+                                {% if ref.is_rewarded %}
+                                    <span class="badge bg-secondary rounded-pill">
+                                        <i class="bi bi-check-circle-fill me-1"></i>Đã nhận
+                                    </span>
+                                {% else %}
+                                    <button class="btn btn-sm btn-success rounded-pill" 
+                                            onclick="claimReward({{ ref.referral_id }}, this)">
+                                        <i class="bi bi-gift-fill me-1"></i>Nhận 50 Token
+                                    </button>
+                                {% endif %}
+                            </div>
                         </li>
                         {% empty %}
                         <li class="list-group-item text-muted text-center small">Chưa có ai đăng ký qua link của bạn.</li>
@@ -118,6 +135,44 @@ function copyLink() {
         copyBtnText.textContent = 'Đã sao chép!';
         setTimeout(() => copyBtnText.textContent = 'Sao chép', 2000);
     }).catch(err => console.error('Could not copy text:', err));
+}
+
+async function claimReward(referralId, btnElement) {
+    if (!confirm("Bạn muốn nhận 50 Token cho lượt giới thiệu này?")) return;
+
+    // Hiệu ứng loading cho nút
+    const originalHTML = btnElement.innerHTML;
+    btnElement.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+    btnElement.disabled = true;
+
+    try {
+        const response = await fetch("{% url 'accounts:api_claim_referral_reward' %}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": "{{ csrf_token }}"
+            },
+            body: JSON.stringify({ referral_id: referralId })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            alert("🎉 " + data.message);
+            // Reload lại trang để cập nhật số dư và trạng thái nút
+            location.reload();
+        } else {
+            alert("⚠️ " + data.message);
+            // Reset nút nếu lỗi
+            btnElement.innerHTML = originalHTML;
+            btnElement.disabled = false;
+        }
+    } catch (error) {
+        console.error(error);
+        alert("Lỗi kết nối server!");
+        btnElement.innerHTML = originalHTML;
+        btnElement.disabled = false;
+    }
 }
 
 document.addEventListener('DOMContentLoaded', function () {
