@@ -7,7 +7,7 @@ from django.conf import settings
 # Lấy khóa từ settings (đã được đảm bảo load từ biến môi trường/mặc định an toàn)
 # Khóa phải được .encode() về bytes trước khi truyền vào Fernet
 try:
-    _cipher_suite = Fernet(settings.FERNET_KEY.encode())
+    _cipher_suite = Fernet(settings.FERNET_CRYPTO_KEY.encode())
 except Exception as e:
     # Nếu có lỗi (ví dụ: key không hợp lệ), in lỗi và dừng
     raise RuntimeError(f"Lỗi khởi tạo Fernet Cipher Suite: {e}. Vui lòng kiểm tra giá trị PEPE_CRYPTO_KEY")

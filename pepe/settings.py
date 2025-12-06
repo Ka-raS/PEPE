@@ -137,7 +137,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 from dotenv import load_dotenv
 load_dotenv()
 
-HSCOIN_API_BASE_URL = os.environ.get('HSCOIN_API_BASE_URL')
+HSCOIN_API_BASE_URL = "https://hsc-w3oq.onrender.com/api"
 HSCOIN_API_KEY = os.environ.get('HSCOIN_API_KEY')
 
 ADMIN_WALLET_ADDRESS = os.environ.get("ADMIN_WALLET_ADDRESS")
@@ -146,6 +146,6 @@ ADMIN_PRIVATE_KEY = os.environ.get("ADMIN_PRIVATE_KEY")
 TOKEN_CONTRACT_ADDRESS = os.environ.get("TOKEN_CONTRACT_ADDRESS")
 STORE_PRIVATE_KEYS_PLAINTEXT = False
 
-FERNET_KEY = os.environ.get("PEPE_CRYPTO_KEY")
+FERNET_CRYPTO_KEY = os.environ.get("FERNET_CRYPTO_KEY")
 
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')

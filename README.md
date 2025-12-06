@@ -1,6 +1,6 @@
 # PEPE - Web Forum
 
-> **Also see the main branch [here](https://github.com/Ka-raS/PEPE.git)**
+> **Also see the [no-token branch](https://github.com/Ka-raS/PEPE/tree/no-token) for a simpler "How to run" setup**
 
 | ![Homepage](/media/screenshots/home_index.png)               | ![Profile](/media/screenshots/accounts_index.png)            |
 |:------------------------------------------------------------:|:------------------------------------------------------------:|
@@ -8,6 +8,7 @@
 | ![Test](/media/screenshots/forum_test_detail.png)            | ![Take Test](/media/screenshots/forum_take_test.png)         |
 | ![Create Test](/media/screenshots/forum_test_form.png)       | ![Question Bank](/media/screenshots/forum_question_bank.png) |
 | ![Grade Test](/media/screenshots/forum_grade_submission.png) | ![Submission](/media/screenshots/forum_submission.png)       |
+| ![Wallet](/media/screenshots/wallet_index.png)               | ![Referral](/media/screenshots/wallet_referral.png)         |
 
 ## Contributors
 
@@ -15,6 +16,7 @@
 - Phạm Quốc Hùng ([phamquocdow](https://github.com/phamquocdow))  
 - Juky ([Namtran205](https://github.com/Namtran205))  
 - An Phạm ([AnPham1820](https://github.com/AnPham1820))
+- hastur-78 ([hastur-78](https://github.com/hastur-78))
 
 ## Main Features
 
@@ -25,9 +27,15 @@
 - Creating tests from the question banks.
 - Grading test's submissions both automatically and manually.
 
+- Gemini chatbot integrated.
+- Use [HSCoin](https://hsc-w3oq.onrender.com) as token supplier.
+- Token reward system for daily check-ins, friend referrals, and acing a test.
+- Spend tokens by downloading study materials attached to posts, or unlocking a test.
+
 ## Documentation (Vietnamese)
 
 - [Database](/docs/Báo_cáo_bài_tập_lớn_môn_cơ_sở_dữ_liệu_nhóm_10.pdf)
+- [Information Security](/docs/BÁO_CÁO_CSATTT.pdf)
 
 ## How to Run
 
@@ -39,7 +47,7 @@
 1. Git Clone:
 
     ```bash
-    git clone --branch no-token https://github.com/Ka-raS/PEPE.git
+    git clone https://github.com/Ka-raS/PEPE.git
     cd PEPE
     ```
 
@@ -51,7 +59,11 @@
     pip install -r requirements.txt
     ```
 
-3. Run Server:
+3. Set up environment variables:
+
+    Open [`.env`](/.env) to see the instructions.
+
+4. Run Server:
 
     ```bash
     python manage.py runserver
@@ -61,6 +73,5 @@
 
 | Username        | Password  |
 |-----------------|-----------|
-| student         | 000000    |
-| anotherstudent  | 000000    |
-| teacher         | 000000    |
+| hung            | 24092005  |
+| linh            | 24092005  |

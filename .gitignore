@@ -3,9 +3,7 @@
 **/__pycache__/
 
 .env
-
 # media/
 # example.sqlite3
-tables.sql
 
 Abbey Road

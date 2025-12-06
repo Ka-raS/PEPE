@@ -1,3 +1,8 @@
+cryptography==46.0.3
+Django==5.2.7
+google-generativeai==0.8.5
+python-dotenv==1.2.1
+
 aiohappyeyeballs==2.6.1
 aiohttp==3.13.2
 aiosignal==1.4.0
@@ -10,9 +15,7 @@ certifi==2025.11.12
 cffi==2.0.0
 charset-normalizer==3.4.4
 ckzg==2.1.5
-cryptography==46.0.3
 cytoolz==1.1.0
-Django==5.2.7
 eth-account==0.13.7
 eth-hash==0.7.1
 eth-keyfile==0.8.1
@@ -27,7 +30,6 @@ google-api-core==2.28.1
 google-api-python-client==2.187.0
 google-auth==2.43.0
 google-auth-httplib2==0.2.1
-google-generativeai==0.8.5
 googleapis-common-protos==1.72.0
 grpcio==1.76.0
 grpcio-status==1.71.2
@@ -48,7 +50,6 @@ pycryptodome==3.23.0
 pydantic==2.12.5
 pydantic_core==2.41.5
 pyparsing==3.2.5
-python-dotenv==1.2.1
 pyunormalize==17.0.0
 regex==2025.11.3
 requests==2.32.5
